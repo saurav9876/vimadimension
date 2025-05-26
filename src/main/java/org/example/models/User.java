@@ -1,70 +1,95 @@
-// src/main/java/org/example/models/User.java
+// /Users/sauravkejriwal/workspace/vimadimension/src/main/java/org/example/models/User.java
 package org.example.models;
 
-import jakarta.persistence.*; // Using Jakarta Persistence for Spring Boot 3+
+import jakarta.persistence.*;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
-@Table(name = "users") // Specifies the database table name
+@Table(name = "users") // "user" is often a reserved keyword in SQL
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // DB will auto-generate the ID
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, unique = true)
     private String username;
 
+    @Column(nullable = false)
+    private String password;
+
     @Column(nullable = false, unique = true)
     private String email;
 
-    // We'll skip password for now to keep it simple, but you'd add it here for a real app
-    // private String password;
+    private boolean enabled = true; // For Spring Security to check if user is active
 
-    // JPA requires a no-argument constructor
+    // We'll use simple string-based roles for now.
+    // For more complex role/permission systems, you might use a separate Role entity.
+    @ElementCollection(fetch = FetchType.EAGER) // Eager fetch for roles is common for security
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "role")
+    private Set<String> roles = new HashSet<>();
+
+    // Constructors
     public User() {
     }
 
-    public User(String username, String email) {
+    public User(String username, String password, Set<String> roles) {
         this.username = username;
-        this.email = email;
+        this.password = password; // Password should be encoded before saving
+        this.roles = roles;
+        this.enabled = true;
     }
 
-    // Getters
+    // Getters and Setters
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getUsername() {
         return username;
     }
 
-    public String getEmail() {
-        return email;
-    }
-
-    // Setters (JPA might need them, or you might use them for updates)
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getEmail() {
+        return email;
     }
 
     public void setEmail(String email) {
         this.email = email;
     }
 
-    @Override
-    public String toString() {
-        return "User{" +
-                "id=" + id +
-                ", username='" + username + '\'' +
-                ", email='" + email + '\'' +
-                '}';
+    public String getPassword() {
+        return password;
     }
 
-    // It's good practice to implement equals() and hashCode() for entities,
-    // especially if you plan to use them in collections or compare them.
-    // For brevity, I'll omit them here but consider adding them based on 'id' or 'email'/'username'.
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public Set<String> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<String> roles) {
+        this.roles = roles;
+    }
+
+    // toString, equals, hashCode (optional but good practice)
 }

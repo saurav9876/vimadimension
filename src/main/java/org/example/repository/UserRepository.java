@@ -1,4 +1,4 @@
-// src/main/java/org/example/repository/UserRepository.java
+// /Users/sauravkejriwal/workspace/vimadimension/src/main/java/org/example/repository/UserRepository.java
 package org.example.repository;
 
 import org.example.models.User;
@@ -9,11 +9,8 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-
-    // Spring Data JPA can derive queries from method names:
     Optional<User> findByUsername(String username);
     Optional<User> findByEmail(String email);
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
-
 }

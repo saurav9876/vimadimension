@@ -25,6 +25,9 @@ dependencies {
 
     // For Spring Data JPA
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-security") // <-- ADD THIS LINE
+    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
 
     // You'll also need a JDBC driver for your chosen database.
     // For example, if you're using PostgreSQL:
@@ -35,9 +38,6 @@ dependencies {
 
     // Or for MySQL:
     runtimeOnly("com.mysql:mysql-connector-j")
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    // ... other dependencies
-    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
 }
 
 tasks.test {
