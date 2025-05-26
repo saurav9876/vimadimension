@@ -35,8 +35,9 @@ dependencies {
 
     // Or for MySQL:
     runtimeOnly("com.mysql:mysql-connector-j")
-
+    implementation("org.springframework.boot:spring-boot-starter-web")
     // ... other dependencies
+    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
 }
 
 tasks.test {

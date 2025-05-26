@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Project List</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        h1 { color: #333; }
+        .no-projects { color: #777; font-style: italic; }
+        .action-links a { margin-right: 10px; text-decoration: none; }
+        .action-links a:hover { text-decoration: underline; }
+        .create-link { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<h1>Projects</h1>
+
+<!-- Link to create a new project -->
+<div class="create-link">
+    <a th:href="@{/projects/new}">Create New Project</a>
+</div>
+
+<div th:if="${projects.isEmpty()}">
+    <p class="no-projects">No projects found.</p>
+</div>
+
+<table th:unless="${projects.isEmpty()}">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Description</th>
+        <!-- Add more columns as needed, e.g., for actions -->
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="project : ${projects}">
+        <td th:text="${project.id}">1</td>
+        <td th:text="${project.name}">Sample Project Name</td>
+        <td th:text="${project.description}">Sample project description.</td>
+    </tr>
+    </tbody>
+</table>
+
+</body>
+</html>
