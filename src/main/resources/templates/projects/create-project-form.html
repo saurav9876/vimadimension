@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Create New Project</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .container { width: 50%; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
+        h1 { color: #333; }
+        label { display: block; margin-top: 10px; }
+        input[type="text"], textarea { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        textarea { resize: vertical; min-height: 80px; }
+        .form-actions { margin-top: 20px; }
+        button { padding: 10px 15px; background-color: #5cb85c; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #4cae4c; }
+        a { color: #007bff; text-decoration: none; margin-left: 10px;}
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Create New Project</h1>
+
+    <!--
+        The th:action="@{/projects}" specifies that the form will be submitted via POST to /projects.
+        The th:object="${project}" binds this form to the 'project' object we added to the model in the controller.
+    -->
+    <form th:action="@{/projects}" th:object="${project}" method="post">
+        <div>
+            <label for="name">Project Name:</label>
+            <!-- th:field="*{name}" binds this input to the 'name' property of the 'project' object -->
+            <input type="text" id="name" th:field="*{name}" required />
+        </div>
+        <div>
+            <label for="description">Description:</label>
+            <!-- th:field="*{description}" binds this input to the 'description' property -->
+            <textarea id="description" th:field="*{description}"></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit">Create Project</button>
+            <a th:href="@{/projects}">Cancel</a>
+        </div>
+    </form>
+</div>
+</body>
+</html>
