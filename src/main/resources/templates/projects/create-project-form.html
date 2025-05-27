@@ -22,10 +22,10 @@
     <h1>Create New Project</h1>
 
     <!--
-        The th:action="@{/projects}" specifies that the form will be submitted via POST to /projects.
+        The th:action="@{/projects/create}" specifies that the form will be submitted via POST to /projects/create.
         The th:object="${project}" binds this form to the 'project' object we added to the model in the controller.
     -->
-    <form th:action="@{/projects}" th:object="${project}" method="post">
+    <form th:action="@{/projects/create}" th:object="${project}" method="post">
         <div>
             <label for="name">Project Name:</label>
             <!-- th:field="*{name}" binds this input to the 'name' property of the 'project' object -->
