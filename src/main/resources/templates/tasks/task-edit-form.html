@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Task: <span th:text="${taskUpdateDto.name}">Task Name</span></title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f9f9f9; color: #333; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; font-size: 1.8em; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input[type="text"],
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group textarea { min-height: 100px; resize: vertical; }
+        .form-actions { margin-top: 25px; text-align: right; }
+        .form-actions button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .form-actions .btn-submit { background-color: #007bff; color: white; } /* Blue for update */
+        .form-actions .btn-submit:hover { background-color: #0056b3; }
+        .form-actions .btn-cancel { background-color: #6c757d; color: white; margin-left: 10px; }
+        .form-actions .btn-cancel:hover { background-color: #5a6268; }
+        .error-message { color: red; font-size: 0.9em; margin-top: 5px; }
+        .back-link { margin-bottom: 20px; display: inline-block; }
+        .back-link a { color: #0056b3; text-decoration: none; }
+        .back-link a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="back-link" th:if="${project != null}">
+        <a th:href="@{/projects/{id}/details(id=${project.id})}">&laquo; Back to Project: <span th:text="${project.name}">Project Name</span></a>
+    </div>
+    <div class="back-link" th:if="${taskUpdateDto != null && taskUpdateDto.id != null && project == null}">
+         <!-- Fallback if project context isn't directly passed but task ID is known -->
+        <a th:href="@{/tasks/{taskId}/details(taskId=${taskUpdateDto.id})}">&laquo; Back to Task Details</a>
+    </div>
+
+
+    <h1>Edit Task: <span th:text="${taskUpdateDto.name}">Task Name</span></h1>
+
+    <!-- Display general error messages from RedirectAttributes if any -->
+    <div th:if="${errorMessage}" class="error-message" style="background-color: #fdd; border: 1px solid red; padding: 10px; margin-bottom: 15px;">
+        <p th:text="${errorMessage}"></p>
+    </div>
+
+    <form th:action="@{/tasks/{taskId}/update(taskId=${taskUpdateDto.id})}"
+          th:object="${taskUpdateDto}"
+          method="post">
+
+        <!-- Hidden input for ID if needed, though it's in the action URL -->
+        <!-- <input type="hidden" th:field="*{id}" /> -->
+
+        <!-- Task Name -->
+        <div class="form-group">
+            <label for="name">Task Name:</label>
+            <input type="text" id="name" th:field="*{name}" placeholder="Enter task name" required />
+            <div th:if="${#fields.hasErrors('name')}" th:errors="*{name}" class="error-message">Name Error</div>
+        </div>
+
+        <!-- Task Description -->
+        <div class="form-group">
+            <label for="description">Description:</label>
+            <textarea id="description" th:field="*{description}" placeholder="Enter task description"></textarea>
+            <div th:if="${#fields.hasErrors('description')}" th:errors="*{description}" class="error-message">Description Error</div>
+        </div>
+
+        <!-- Assignee -->
+        <div class="form-group">
+            <label for="assigneeId">Assign To:</label>
+            <select id="assigneeId" th:field="*{assigneeId}">
+                <option value="">-- Unassigned --</option>
+                <option th:each="user : ${assignableUsers}"
+                        th:value="${user.id}"
+                        th:text="${user.username}"
+                        th:selected="${taskUpdateDto.assigneeId != null && taskUpdateDto.assigneeId == user.id}">John Doe</option>
+            </select>
+            <div th:if="${#fields.hasErrors('assigneeId')}" th:errors="*{assigneeId}" class="error-message">Assignee Error</div>
+        </div>
+
+        <!-- Status -->
+        <div class="form-group">
+            <label for="status">Status:</label>
+            <select id="status" th:field="*{status}">
+                <option th:each="stat : ${taskStatuses}"
+                        th:value="${stat}"
+                        th:text="${stat.displayName}"
+                        th:selected="${taskUpdateDto.status != null && taskUpdateDto.status == stat}">To Do</option>
+            </select>
+            <div th:if="${#fields.hasErrors('status')}" th:errors="*{status}" class="error-message">Status Error</div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">Update Task</button>
+            <a th:if="${project != null}" th:href="@{/projects/{id}/details(id=${project.id})}" class="btn-cancel" style="text-decoration: none; display: inline-block; padding: 10px 20px;">Cancel</a>
+            <a th:if="${taskUpdateDto != null && taskUpdateDto.id != null && project == null}" th:href="@{/tasks/{taskId}/details(taskId=${taskUpdateDto.id})}" class="btn-cancel" style="text-decoration: none; display: inline-block; padding: 10px 20px;">Cancel</a>
+        </div>
+    </form>
+</div>
+
+</body>
+</html>

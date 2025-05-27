@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Log Time for Task: <span th:text="${task.name}">Task Name</span></title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f9f9f9; color: #333; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; font-size: 1.8em; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input[type="number"],
+        .form-group input[type="date"],
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group textarea { min-height: 80px; resize: vertical; }
+        .form-actions { margin-top: 25px; text-align: right; }
+        .form-actions button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .form-actions .btn-submit { background-color: #28a745; color: white; }
+        .form-actions .btn-submit:hover { background-color: #218838; }
+        .form-actions .btn-cancel { background-color: #6c757d; color: white; margin-left: 10px; text-decoration: none; display: inline-block; padding: 10px 20px;}
+        .form-actions .btn-cancel:hover { background-color: #5a6268; }
+        .error-message { color: red; font-size: 0.9em; margin-top: 5px; }
+        .general-error-message { color: red; background-color: #fdd; border: 1px solid red; padding: 10px; margin-bottom: 15px; border-radius: 4px;}
+        .back-link { margin-bottom: 20px; display: inline-block; }
+        .back-link a { color: #0056b3; text-decoration: none; }
+        .back-link a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="back-link" th:if="${task != null && task.project != null}">
+        <a th:href="@{/projects/{id}/details(id=${task.project.id})}">&laquo; Back to Project Details</a>
+    </div>
+
+    <h1>Log Time for Task: <span th:text="${task.name}">Task Name</span></h1>
+
+    <!-- Display general error messages from RedirectAttributes or direct model attribute -->
+    <div th:if="${errorMessage}" class="general-error-message">
+        <p th:text="${errorMessage}"></p>
+    </div>
+
+    <form th:action="@{/timelogs/task/{taskId}/log(taskId=${task.id})}"
+          th:object="${timeLogDto}"
+          method="post">
+
+        <!-- Hours Spent -->
+        <div class="form-group">
+            <label for="hoursLogged">Hours Spent:</label>
+            <input type="number" id="hoursLogged" th:field="*{hoursLogged}" step="0.1" min="0.1" placeholder="e.g., 2.5" required />
+            <div th:if="${#fields.hasErrors('hoursLogged')}" th:errors="*{hoursLogged}" class="error-message">Hours Error</div>
+        </div>
+
+        <!-- Date Logged -->
+        <div class="form-group">
+            <label for="dateLogged">Date Logged:</label>
+            <input type="date" id="dateLogged" th:field="*{dateLogged}" required />
+            <div th:if="${#fields.hasErrors('dateLogged')}" th:errors="*{dateLogged}" class="error-message">Date Error</div>
+        </div>
+
+        <!-- Comments -->
+        <div class="form-group">
+            <label for="comments">Work Description (Optional):</label>
+            <textarea id="comments" th:field="*{workDescription}" placeholder="Add Work Description"></textarea>
+            <div th:if="${#fields.hasErrors('workDescription')}" th:errors="*{workDescription}" class="error-message">Work Description Error</div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">Log Time</button>
+            <a th:if="${task != null && task.project != null}" th:href="@{/projects/{id}/details(id=${task.project.id})}" class="btn-cancel">Cancel</a>
+        </div>
+    </form>
+</div>
+
+</body>
+</html>

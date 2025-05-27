@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create New Task for Project: <span th:text="${project.name}">Project Name</span></title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f9f9f9; color: #333; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; font-size: 1.8em; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input[type="text"],
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group textarea { min-height: 100px; resize: vertical; }
+        .form-actions { margin-top: 25px; text-align: right; }
+        .form-actions button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .form-actions .btn-submit { background-color: #28a745; color: white; }
+        .form-actions .btn-submit:hover { background-color: #218838; }
+        .form-actions .btn-cancel { background-color: #6c757d; color: white; margin-left: 10px; }
+        .form-actions .btn-cancel:hover { background-color: #5a6268; }
+        .error-message { color: red; font-size: 0.9em; margin-top: 5px; }
+        .back-link { margin-bottom: 20px; display: inline-block; }
+        .back-link a { color: #0056b3; text-decoration: none; }
+        .back-link a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="back-link">
+        <a th:href="@{/projects/{id}/details(id=${project.id})}">&laquo; Back to Project Details</a>
+    </div>
+
+    <h1>Create New Task for: <span th:text="${project.name}">Project Name</span></h1>
+
+    <!-- Display general error messages from RedirectAttributes if any -->
+    <div th:if="${errorMessage}" class="error-message" style="background-color: #fdd; border: 1px solid red; padding: 10px; margin-bottom: 15px;">
+        <p th:text="${errorMessage}"></p>
+    </div>
+
+    <form th:action="@{/tasks/project/{projectId}/create(projectId=${project.id})}"
+          th:object="${taskCreateDto}"
+          method="post">
+
+        <!-- Task Name -->
+        <div class="form-group">
+            <label for="name">Task Name:</label>
+            <input type="text" id="name" th:field="*{name}" placeholder="Enter task name" required />
+            <div th:if="${#fields.hasErrors('name')}" th:errors="*{name}" class="error-message">Name Error</div>
+        </div>
+
+        <!-- Task Description -->
+        <div class="form-group">
+            <label for="description">Description:</label>
+            <textarea id="description" th:field="*{description}" placeholder="Enter task description"></textarea>
+            <div th:if="${#fields.hasErrors('description')}" th:errors="*{description}" class="error-message">Description Error</div>
+        </div>
+
+        <!-- Assignee -->
+        <div class="form-group">
+            <label for="assigneeId">Assign To:</label>
+            <select id="assigneeId" th:field="*{assigneeId}">
+                <option value="">-- Unassigned --</option>
+                <option th:each="user : ${assignableUsers}"
+                        th:value="${user.id}"
+                        th:text="${user.username}">John Doe</option>
+            </select>
+            <div th:if="${#fields.hasErrors('assigneeId')}" th:errors="*{assigneeId}" class="error-message">Assignee Error</div>
+        </div>
+
+        <!--
+            Status field: For new tasks, status is often set by default in the service.
+            If you want to allow setting it on creation, uncomment this.
+            Otherwise, the TaskService.createTask method should handle setting a default status.
+        <div class="form-group">
+            <label for="status">Status:</label>
+            <select id="status" th:field="*{status}">
+                <option th:each="stat : ${taskStatuses}"
+                        th:value="${stat}"
+                        th:text="${stat.displayName}">To Do</option>
+            </select>
+            <div th:if="${#fields.hasErrors('status')}" th:errors="*{status}" class="error-message">Status Error</div>
+        </div>
+        -->
+
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">Create Task</button>
+            <a th:href="@{/projects/{id}/details(id=${project.id})}" class="btn-cancel" style="text-decoration: none; display: inline-block; padding: 10px 20px;">Cancel</a>
+        </div>
+    </form>
+</div>
+
+</body>
+</html>
