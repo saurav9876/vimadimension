@@ -1,0 +1,110 @@
+<!-- src/main/resources/templates/users/user-profile.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" th:href="@{/css/custom-styles.css}">
+    <title th:text="${user.username} + ' - Profile'">User Profile</title>
+    <!-- Add your CSS links here -->
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        .profile-container { max-width: 900px; margin: auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .profile-header { text-align: center; margin-bottom: 25px; }
+        .profile-header h1 { color: #0056b3; margin-bottom: 5px;}
+        .profile-header .designation { font-size: 1.2em; color: #555; }
+        .profile-section { margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 5px; }
+        .profile-section h2 { color: #0056b3; font-size: 1.4em; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-top: 0; }
+        .profile-details p { margin: 8px 0; line-height: 1.6; }
+        .profile-details strong { min-width: 150px; display: inline-block; color: #333; }
+
+        /* Updated class name and styles for tasks list */
+        .tasks-list ul { list-style-type: none; padding-left: 0; }
+        .tasks-list li { background-color: #f9f9f9; border: 1px solid #e0e0e0; padding: 12px; margin-bottom: 10px; border-radius: 4px; }
+        .tasks-list .task-name a { text-decoration: none; color: #007bff; font-weight: bold; font-size: 1.1em; }
+        .tasks-list .task-name a:hover { text-decoration: underline; }
+        .tasks-list .task-details p { margin: 5px 0; font-size: 0.9em; color: #555; }
+        .tasks-list .task-details strong { min-width: 100px; /* Adjusted for task details */ }
+        .tasks-list .task-status { font-weight: bold; }
+        .tasks-list .task-status-PENDING { color: #ffc107; } /* Example: Yellow for pending */
+        .tasks-list .task-status-IN_PROGRESS { color: #17a2b8; } /* Example: Teal for in progress */
+        .tasks-list .task-status-COMPLETED { color: #28a745; } /* Example: Green for completed */
+
+
+        .no-content { color: #777; font-style: italic; }
+        .portfolio-link a { color: #007bff; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="profile-container">
+    <div class="profile-logo-container">
+        <img th:src="@{/images/firm-logo.jpeg}" alt="Firm Logo" class="firm-logo-img"/>
+    </div>
+    <div th:if="${user}">
+        <div class="profile-header">
+            <h1 th:text="${user.username}">User Name</h1>
+            <p th:if="${user.designation}" class="designation" th:text="${user.designation}">Architect</p>
+        </div>
+
+        <div class="profile-section profile-details">
+            <h2>Contact Information</h2>
+            <p><strong>Email:</strong> <span th:text="${user.email}">user@example.com</span></p>
+        </div>
+
+        <div class="profile-section profile-details">
+            <h2>Professional Details</h2>
+            <p th:if="${user.specialization}"><strong>Specialization:</strong> <span th:text="${user.specialization}"></span></p>
+            <p th:if="${user.licenseNumber}"><strong>License Number:</strong> <span th:text="${user.licenseNumber}"></span></p>
+            <p th:if="${user.portfolioLink}" class="portfolio-link">
+                <strong>Portfolio:</strong> <a th:href="${user.portfolioLink}" th:text="${user.portfolioLink}" target="_blank">View Portfolio</a>
+            </p>
+            <div th:if="${user.bio}">
+                <strong>Bio:</strong>
+                <p style="white-space: pre-wrap;" th:text="${user.bio}"></p>
+            </div>
+            <p th:if="${#strings.isEmpty(user.specialization) and #strings.isEmpty(user.licenseNumber) and #strings.isEmpty(user.portfolioLink) and #strings.isEmpty(user.bio)}" class="no-content">
+                No additional professional details provided.
+            </p>
+        </div>
+
+        <!-- MODIFIED SECTION FOR TASKS -->
+        <div class="profile-section tasks-list"> <!-- Changed class from projects-list -->
+            <h2>My Tasks</h2> <!-- Changed heading -->
+            <div th:if="${user.assignedTasks != null && !user.assignedTasks.isEmpty()}">
+                <ul>
+                    <li th:each="task : ${user.assignedTasks}">
+                        <div class="task-name">
+                            <!-- Assuming you might have a task details page -->
+                            <a th:href="@{/tasks/{id}/details(id=${task.id})}" th:text="${task.name}">Task Name</a>
+                        </div>
+                        <div class="task-details">
+                            <p th:if="${task.description}"><strong>Description:</strong> <span th:text="${#strings.abbreviate(task.description, 150)}"></span></p>
+                            <p th:if="${task.project}"><strong>Project:</strong> <span th:text="${task.project.name}"></span></p>
+                            <p th:if="${task.status}"><strong>Status:</strong>
+                                <span th:text="${task.status}"
+                                      th:classappend="'task-status-' + ${task.status.toString().toUpperCase()}"
+                                      class="task-status">
+                                    Task Status
+                                </span>
+                            </p>
+                            <!--<p th:if="${task.dueDate}"><strong>Due Date:</strong> <span th:text="${#temporals.format(task.dueDate, 'dd-MMM-yyyy')}"></span></p> -->
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div th:unless="${user.assignedTasks != null && !user.assignedTasks.isEmpty()}">
+                <p class="no-content">You have no tasks assigned yet.</p> <!-- Updated message -->
+            </div>
+        </div>
+        <!-- END OF MODIFIED SECTION FOR TASKS -->
+
+    </div>
+    <div th:unless="${user}">
+        <p>User information not available.</p>
+    </div>
+</div>
+
+</body>
+</html>

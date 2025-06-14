@@ -1,0 +1,32 @@
+<!-- src/main/resources/templates/fragments/navbar.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+
+<nav th:fragment="navbar" class="navbar"> <!-- Ensure th:fragment="navbar" is present -->
+    <div class="navbar-container">
+        <!-- Updated Brand Name and Link -->
+        <a href="https://www.vimathedimension.com/" class="navbar-brand" target="_blank">VIMA - THE DIMENSION</a>
+        <ul class="navbar-nav">
+            <li sec:authorize="isAuthenticated()">
+                <a th:href="@{/profile}" class="nav-link">My Profile</a>
+            </li>
+            <li sec:authorize="isAuthenticated()">
+                <a th:href="@{/projects}" class="nav-link">Projects</a>
+            </li>
+            <!-- Add other common navigation links here -->
+            <li sec:authorize="hasAnyAuthority('ROLE_ADMIN', 'ROLE_MANAGER')">
+                <a th:href="@{/projects/new}" class="nav-link">New Project</a>
+            </li>
+            <li sec:authorize="isAuthenticated()">
+                <form th:action="@{/logout}" method="post" style="display: inline;">
+                    <button type="submit" class="nav-link logout-button">Logout (<span sec:authentication="name">User</span>)</button>
+                </form>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+</body>
+</html>

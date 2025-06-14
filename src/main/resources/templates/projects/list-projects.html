@@ -17,20 +17,32 @@
             border-radius: 4px;
             font-size: 0.9em;
             color: white;
+            display: inline-block; /* Ensures proper spacing and behavior */
         }
         .actions a.view-details, .button-link.view-details { background-color: #007bff; }
         .actions a.edit, .button-link.edit { background-color: #ffc107; color: #212529; }
+        .button-link.back-to-list { background-color: #6c757d; } /* Grey for back/secondary action */
         .actions a:hover, .button-link:hover { opacity: 0.85; }
-        .create-project-link { margin-bottom: 20px; display: inline-block; }
+        .page-top-actions { /* Renamed for clarity and to hold multiple buttons */
+            margin-bottom: 20px;
+            display: flex; /* For aligning buttons in a row */
+            gap: 10px; /* Adds space between buttons if using flex */
+        }
         .no-projects { color: #777; font-style: italic; margin-top: 15px; }
+        .back-link { margin-bottom: 20px; display: inline-block; }
+        .back-link a { color: #0056b3; text-decoration: none; }
+        .back-link a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <div class="back-link">
+        <a th:href="@{/profile}">&laquo; Back to User Profile</a>
+    </div>
     <h1>Project List</h1>
 
-    <div class="create-project-link">
+    <div class="page-top-actions">
         <a th:href="@{/projects/new}" class="button-link view-details">Create New Project</a>
     </div>
 
@@ -44,21 +56,17 @@
             <th>ID</th>
             <th>Project Name</th>
             <th>Description</th>
-            <!-- "Created At" column header removed -->
             <th>Actions</th>
         </tr>
         </thead>
         <tbody>
-        <!-- Iterate over the 'projects' list provided by the controller -->
         <tr th:each="proj : ${projects}">
             <td th:text="${proj.id}">1</td>
             <td th:text="${proj.name}">Sample Project</td>
             <td th:text="${proj.description != null ? #strings.abbreviate(proj.description, 100) : ''}">A brief description...</td>
-            <!-- td for proj.createdAt removed -->
             <td class="actions">
                 <a th:href="@{/projects/{id}/details(id=${proj.id})}" class="view-details">View Details</a>
                 <a th:href="@{/projects/{id}/edit(id=${proj.id})}" class="edit">Edit</a>
-                <!-- Delete button can be added here as well, similar to project-details -->
             </td>
         </tr>
         </tbody>

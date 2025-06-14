@@ -28,7 +28,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-security") // <-- ADD THIS LINE
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
-
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     // You'll also need a JDBC driver for your chosen database.
     // For example, if you're using PostgreSQL:
     // runtimeOnly("org.postgresql:postgresql")
