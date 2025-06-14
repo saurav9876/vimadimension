@@ -4,14 +4,18 @@ package org.example.service;
 import org.example.dto.ProjectCreateDto;
 import org.example.dto.ProjectUpdateDto;
 import org.example.models.Project;
+import org.example.models.User;
 import org.example.repository.ProjectRepository;
 import org.example.repository.TaskRepository; // Import TaskRepository
+import org.example.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -22,11 +26,13 @@ public class ProjectService {
     private static final Logger logger = LoggerFactory.getLogger(ProjectService.class);
 
     private final ProjectRepository projectRepository;
+    private final UserRepository userRepository; // Inject UserRepository
     private final TaskRepository taskRepository; // Added TaskRepository
 
     @Autowired
-    public ProjectService(ProjectRepository projectRepository, TaskRepository taskRepository) {
+    public ProjectService(ProjectRepository projectRepository, UserRepository userRepository, TaskRepository taskRepository) {
         this.projectRepository = projectRepository;
+        this.userRepository = userRepository;
         this.taskRepository = taskRepository; // Initialize TaskRepository
     }
 
@@ -78,6 +84,34 @@ public class ProjectService {
 
     public List<Project> findAllProjects() { // Renamed for consistency
         return projectRepository.findAll();
+    }
+
+    @Transactional // This ensures all database operations are part of a single transaction
+    public Project createProject(ProjectCreateDto projectCreateDto, String creatorUsername) {
+        Project project = new Project();
+        project.setName(projectCreateDto.getName());
+        project.setDescription(projectCreateDto.getDescription());
+        // ... set other project properties ...
+
+        Project savedProject = projectRepository.save(project); // Project is saved
+
+        User creator = userRepository.findByUsername(creatorUsername)
+                .orElseThrow(() -> new UsernameNotFoundException(
+                        "User not found: " + creatorUsername + ". Cannot assign project creator."));
+
+        // Initialize the set if it's null (important for new users or if not eagerly fetched before)
+        if (creator.getAccessibleProjects() == null) {
+            creator.setAccessibleProjects(new HashSet<>());
+        }
+        creator.getAccessibleProjects().add(savedProject); // Add to the collection
+
+        userRepository.save(creator); // CRUCIAL: Save the User entity to persist the relationship
+
+        // For debugging, you can log here:
+        // System.out.println("User " + creator.getUsername() + " now has " + creator.getAccessibleProjects().size() + " accessible projects.");
+        // creator.getAccessibleProjects().forEach(p -> System.out.println(" - " + p.getName()));
+
+        return savedProject;
     }
 
     @Transactional

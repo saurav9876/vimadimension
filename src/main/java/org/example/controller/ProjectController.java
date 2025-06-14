@@ -12,13 +12,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize; // For method-level security
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-// import jakarta.validation.Valid; // For DTO validation
+import jakarta.validation.Valid; // For DTO validation
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -48,10 +49,44 @@ public class ProjectController {
     @GetMapping("/new")
     @PreAuthorize("isAuthenticated()")
     public String showCreateProjectForm(Model model) {
-        // Change the attribute name to "project"
-        model.addAttribute("project", new ProjectCreateDto());
-        logger.debug("Displaying form to create a new project.");
-        return "projects/create-project-form";
+        // This line is crucial for the form to work
+        model.addAttribute("projectCreateDto", new ProjectCreateDto());
+        return "projects/create-project-form"; // The Thymeleaf template for the form
+    }
+
+    @PostMapping("/save") // Or whatever your POST mapping is for saving
+    public String saveProject(@Valid @ModelAttribute("projectCreateDto") ProjectCreateDto projectDto,
+                              BindingResult result,
+                                 Authentication authentication, // Inject Authentication
+                              RedirectAttributes redirectAttributes,
+                              Model model) {
+        if (result.hasErrors()) {
+            // If you re-render the form, ensure the model has what it needs
+            // model.addAttribute("projectCreateDto", projectDto); // Already there via @ModelAttribute
+            return "projects/create-project-form";
+        }
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            // Should not happen if endpoint is secured, but good for robustness
+            redirectAttributes.addFlashAttribute("errorMessage", "User not authenticated.");
+            return "redirect:/login";
+        }
+        String currentUsername = authentication.getName(); // Get the username of the logged-in user
+
+        try {
+            Project savedProject = projectService.createProject(projectDto, currentUsername); // Pass username
+            redirectAttributes.addFlashAttribute("successMessage", "Project '" + savedProject.getName() + "' created successfully!");
+            return "redirect:/projects/" + savedProject.getId() + "/details"; // Or to the user profile, or project list
+        } catch (UsernameNotFoundException e) {
+            // This specific catch might be for if the username from authentication suddenly isn't in the DB
+            redirectAttributes.addFlashAttribute("errorMessage", "Error: Creator user not found. " + e.getMessage());
+            return "projects/create-project-form";
+        }
+        catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Error creating project: " + e.getMessage());
+            // Log the exception e.printStackTrace(); or logger.error("...", e);
+            return "projects/create-project-form";
+        }
     }
 
     @PostMapping("/create") // Changed from just @PostMapping to be more explicit

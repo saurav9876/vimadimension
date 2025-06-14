@@ -1,26 +1,32 @@
 package org.example.dto;
 
-// You might add validation annotations later (e.g., from jakarta.validation.constraints)
-// import jakarta.validation.constraints.Email;
-// import jakarta.validation.constraints.NotEmpty;
-// import jakarta.validation.constraints.Size;
+// Add any necessary validation annotations (e.g., from jakarta.validation.constraints)
 
 public class UserRegistrationDto {
 
-    // @NotEmpty
     private String username;
-
-    // @NotEmpty
-    // @Email
-    private String email; // Assuming you want to collect email
-
-    // @NotEmpty
-    // @Size(min = 6, message = "Password should have at least 6 characters")
+    private String email;
     private String password;
-
     private String confirmPassword;
+    private String designation;    // Field for designation
+    private String specialization; // Field for specialization
 
-    // Getters and Setters
+    // --- Constructors ---
+    public UserRegistrationDto() {
+    }
+
+    public UserRegistrationDto(String username, String email, String password, String confirmPassword, String designation, String specialization) {
+        this.username = username;
+        this.email = email;
+        this.password = password;
+        this.confirmPassword = confirmPassword;
+        this.designation = designation;
+        this.specialization = specialization;
+    }
+
+
+    // --- Getters and Setters ---
+
     public String getUsername() {
         return username;
     }
@@ -52,4 +58,26 @@ public class UserRegistrationDto {
     public void setConfirmPassword(String confirmPassword) {
         this.confirmPassword = confirmPassword;
     }
+
+    // Getter for designation - THIS IS LIKELY MISSING OR INCORRECT
+    public String getDesignation() {
+        return designation;
+    }
+
+    // Setter for designation
+    public void setDesignation(String designation) {
+        this.designation = designation;
+    }
+
+    // Getter for specialization
+    public String getSpecialization() {
+        return specialization;
+    }
+
+    // Setter for specialization
+    public void setSpecialization(String specialization) {
+        this.specialization = specialization;
+    }
+
+    // You might also want to add equals, hashCode, and toString methods
 }

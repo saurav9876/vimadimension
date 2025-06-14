@@ -1,0 +1,127 @@
+/* Navbar Styling */
+.navbar {
+    background-color: #0056b3; /* A nice professional blue */
+    padding: 10px 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden; /* Clear floats */
+}
+
+.navbar-container {
+    max-width: 1200px; /* Adjust as needed for your layout */
+    margin: 0 auto; /* Center the container */
+    display: flex;
+    justify-content: space-between; /* Puts brand on left, nav items on right */
+    align-items: center;
+}
+
+.navbar-brand {
+    color: #ffffff; /* White text for the brand */
+    font-size: 1.8em;
+    font-weight: bold;
+    text-decoration: none;
+    padding: 5px 0;
+}
+
+.navbar-brand:hover {
+    color: #e0e0e0; /* Slightly lighter white on hover */
+}
+
+.navbar-nav {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex; /* Align items in a row */
+    align-items: center;
+}
+
+.navbar-nav li {
+    margin-left: 20px; /* Spacing between nav items */
+}
+
+.navbar-nav .nav-link {
+    color: #ffffff; /* White text for links */
+    text-decoration: none;
+    font-size: 1em;
+    padding: 8px 12px;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link.active { /* You can add an 'active' class to the current page's link */
+    background-color: #004080; /* Darker blue on hover/active */
+    color: #ffffff;
+}
+
+/* Example in your profile-styles.css */
+.profile-logo-container {
+    text-align: center; /* Centers the image if it's smaller than the container */
+    margin-bottom: 20px; /* Adds some space below the logo */
+}
+
+.profile-logo-container img {
+    max-width: 200px;   /* Or your preferred max width */
+    height: auto;       /* Maintain aspect ratio */
+    border-radius: 8px; /* Optional: if you want rounded corners for the logo */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Optional: a subtle shadow */
+}
+
+/* Styling for the logout button to make it look like other links */
+.navbar-nav .logout-button {
+    background-color: transparent;
+    border: none;
+    color: #ffffff; /* White text */
+    padding: 8px 12px; /* Match nav-link padding */
+    font-size: 1em;   /* Match nav-link font-size */
+    font-family: inherit; /* Inherit font from parent */
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.navbar-nav .logout-button:hover {
+    background-color: #c82333; /* A distinct red for logout hover, or match nav-link hover */
+    color: #ffffff;
+}
+
+/* Optional: If you want the logout button to be more distinct */
+.navbar-nav .logout-button.distinct {
+    background-color: #dc3545; /* Red background */
+    border: 1px solid #dc3545;
+}
+.navbar-nav .logout-button.distinct:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+/* ... (your existing styles for body, .profile-container, etc.) ... */
+
+/* Logo Styling */
+.profile-logo-container {
+    text-align: center; /* Centers the image within this div */
+    margin-bottom: 30px; /* A bit more space below the logo */
+    padding-top: 10px; /* Some space above if it's the first element */
+}
+
+.firm-logo-img {
+    max-width: 180px;   /* Slightly adjust size if needed */
+    height: auto;       /* Maintain aspect ratio */
+    border-radius: 6px; /* Soft rounded corners for a modern touch */
+    /* Optional: A very subtle border if the logo blends too much with the background */
+    /* border: 1px solid #e0e0e0; */
+
+    /* Optional: A very light shadow for a bit of depth, keeping it minimal */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+
+    /* Optional: A smooth transition if you ever add hover effects */
+    transition: transform 0.3s ease;
+}
+
+/* Optional: A very subtle hover effect - can be removed if too much */
+/*
+.firm-logo-img:hover {
+    transform: scale(1.03);
+}
+*/
+
+/* ... (your existing styles for .profile-header, .profile-section, etc.) ... */

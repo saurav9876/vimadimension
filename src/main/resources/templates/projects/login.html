@@ -12,38 +12,54 @@
             align-items: center;
             height: 100vh;
             margin: 0;
+            padding: 20px; /* Added padding for smaller screens */
+            box-sizing: border-box; /* Ensure padding doesn't cause overflow */
         }
         .login-container {
             background-color: #fff;
             padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-            width: 320px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1); /* Slightly softer shadow */
+            width: 100%; /* Make it responsive */
+            max-width: 360px; /* Max width for the container */
+            text-align: center; /* Center content like logo and title */
         }
-        .login-container h1 {
-            text-align: center;
-            color: #333;
+        .login-logo-container {
             margin-bottom: 20px;
         }
+        .login-logo-img {
+            max-width: 150px; /* Adjust as needed */
+            height: auto;
+            border-radius: 4px; /* Optional: slight rounding for the logo */
+        }
+        .login-container h1 {
+            /* text-align: center; -- Already centered by parent */
+            color: #333;
+            margin-bottom: 25px; /* Increased margin */
+            font-size: 1.8em; /* Slightly larger title */
+        }
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 18px; /* Increased margin */
+            text-align: left; /* Align labels and inputs to the left */
         }
         .form-group label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 6px; /* Increased margin */
             color: #555;
+            font-weight: bold; /* Make labels bold */
         }
         .form-group input[type="text"],
         .form-group input[type="password"] {
             width: 100%;
-            padding: 10px;
+            padding: 12px; /* Increased padding */
             border: 1px solid #ddd;
             border-radius: 4px;
-            box-sizing: border-box; /* Important for padding and width */
+            box-sizing: border-box;
+            font-size: 1em; /* Ensure consistent font size */
         }
         .btn-login {
             width: 100%;
-            padding: 10px;
+            padding: 12px; /* Increased padding */
             background-color: #007bff;
             border: none;
             border-radius: 4px;
@@ -51,15 +67,17 @@
             font-size: 16px;
             cursor: pointer;
             transition: background-color 0.3s ease;
+            margin-top: 10px; /* Added margin above button */
         }
         .btn-login:hover {
             background-color: #0056b3;
         }
         .alert {
-            padding: 10px;
-            margin-bottom: 15px;
+            padding: 12px; /* Increased padding */
+            margin-bottom: 18px; /* Increased margin */
             border-radius: 4px;
             font-size: 0.9em;
+            text-align: left; /* Align alert text to left */
         }
         .alert-danger {
             background-color: #f8d7da;
@@ -71,21 +89,28 @@
             color: #155724;
             border: 1px solid #c3e6cb;
         }
-        .register-link {
+        .options-link { /* Renamed for clarity, can be register-link too */
             text-align: center;
-            margin-top: 15px;
+            margin-top: 20px; /* Increased margin */
+            font-size: 0.95em; /* Slightly larger text */
         }
-        .register-link a {
+        .options-link a {
             color: #007bff;
             text-decoration: none;
+            font-weight: bold; /* Make link bold */
         }
-        .register-link a:hover {
+        .options-link a:hover {
             text-decoration: underline;
         }
     </style>
 </head>
 <body>
 <div class="login-container">
+
+    <div class="login-logo-container">
+        <img th:src="@{/images/firm-logo.jpeg}" alt="Firm Logo" class="login-logo-img"/>
+    </div>
+
     <h1>Login</h1>
 
     <!-- Display error message if login fails -->
@@ -98,11 +123,6 @@
         You have been logged out.
     </div>
 
-    <!--
-        The th:action="@{/login}" will submit the form to the URL configured
-        in SecurityConfig for loginProcessingUrl.
-        Spring Security expects 'username' and 'password' as parameter names by default.
-    -->
     <form th:action="@{/login}" method="post">
         <div class="form-group">
             <label for="username">Username:</label>
@@ -117,12 +137,11 @@
         </div>
     </form>
 
-    <!-- Optional: Link to a registration page -->
-    <!--
-    <div class="register-link">
-        <p>Don't have an account? <a th:href="@{/register}">Register here</a></p>
+    <!-- Link to a registration page -->
+    <div class="options-link">
+        <p>Don't have an account? Ask your admin to register</p>
     </div>
-    -->
+
 </div>
 </body>
 </html>
