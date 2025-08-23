@@ -1,7 +1,9 @@
 package org.example.models;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.example.models.enums.TaskStatus;
+import org.example.models.enums.ProjectStage;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -27,16 +29,23 @@ public class Task {
     @Column(nullable = false)
     private TaskStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "project_stage", nullable = false)
+    private ProjectStage projectStage;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
+    @JsonIgnore // Prevent Hibernate proxy serialization issues
     private Project project;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reporter_id", nullable = false)
+    @JsonIgnore // Prevent Hibernate proxy serialization issues
     private User reporter; // The user who created the task
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assignee_id") // Can be null if task is unassigned
+    @JsonIgnore // Prevent Hibernate proxy serialization issues
     private User assignee; // The user to whom the task is assigned
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -84,6 +93,14 @@ public class Task {
 
     public void setStatus(TaskStatus status) {
         this.status = status;
+    }
+
+    public ProjectStage getProjectStage() {
+        return projectStage;
+    }
+
+    public void setProjectStage(ProjectStage projectStage) {
+        this.projectStage = projectStage;
     }
 
     public Project getProject() {

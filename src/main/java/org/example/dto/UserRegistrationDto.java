@@ -5,23 +5,21 @@ package org.example.dto;
 public class UserRegistrationDto {
 
     private String username;
+    private String name;        // Field for full name
     private String email;
     private String password;
     private String confirmPassword;
-    private String designation;    // Field for designation
-    private String specialization; // Field for specialization
+    private String role;          // Field for role
 
     // --- Constructors ---
     public UserRegistrationDto() {
     }
 
-    public UserRegistrationDto(String username, String email, String password, String confirmPassword, String designation, String specialization) {
+    public UserRegistrationDto(String username, String email, String password, String confirmPassword) {
         this.username = username;
         this.email = email;
         this.password = password;
         this.confirmPassword = confirmPassword;
-        this.designation = designation;
-        this.specialization = specialization;
     }
 
 
@@ -33,6 +31,14 @@ public class UserRegistrationDto {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getEmail() {
@@ -59,24 +65,14 @@ public class UserRegistrationDto {
         this.confirmPassword = confirmPassword;
     }
 
-    // Getter for designation - THIS IS LIKELY MISSING OR INCORRECT
-    public String getDesignation() {
-        return designation;
+    // Getter for role
+    public String getRole() {
+        return role;
     }
 
-    // Setter for designation
-    public void setDesignation(String designation) {
-        this.designation = designation;
-    }
-
-    // Getter for specialization
-    public String getSpecialization() {
-        return specialization;
-    }
-
-    // Setter for specialization
-    public void setSpecialization(String specialization) {
-        this.specialization = specialization;
+    // Setter for role
+    public void setRole(String role) {
+        this.role = role;
     }
 
     // You might also want to add equals, hashCode, and toString methods

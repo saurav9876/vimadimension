@@ -33,70 +33,65 @@ public class UserService {
     }
 
     /**
-     * Registers a new user account.
+     * Creates a new user (admin only method)
      *
-     * @param registrationDto DTO containing user registration data.
-     * @return The newly created and persisted User object.
-     * @throws UserRegistrationException if registration fails (e.g., passwords don't match, username/email exists).
+     * @param userDto DTO containing user creation data
+     * @param adminUser The admin user creating the new user (to get organization)
+     * @return The newly created and persisted User object
+     * @throws IllegalArgumentException if creation fails
      */
     @Transactional
-    public User registerNewUser(UserRegistrationDto registrationDto) throws UserRegistrationException {
-        // ... (your existing validation checks remain the same)
-        String username = registrationDto.getUsername().trim().toLowerCase(); // Normalize
-        String email = registrationDto.getEmail().trim().toLowerCase();       // Normalize
-
-        if (registrationDto == null) {
-            throw new UserRegistrationException("Registration data cannot be null.");
+    public User createUser(UserRegistrationDto userDto, User adminUser) throws IllegalArgumentException {
+        if (userDto == null) {
+            throw new IllegalArgumentException("User data cannot be null.");
         }
-        if (registrationDto.getUsername() == null || registrationDto.getUsername().trim().isEmpty()) {
-            throw new UserRegistrationException("Username cannot be empty.");
+        if (adminUser == null) {
+            throw new IllegalArgumentException("Admin user cannot be null.");
         }
-        if (registrationDto.getEmail() == null || registrationDto.getEmail().trim().isEmpty()) {
-            throw new UserRegistrationException("Email cannot be empty.");
+        if (userDto.getUsername() == null || userDto.getUsername().trim().isEmpty()) {
+            throw new IllegalArgumentException("Username cannot be empty.");
         }
-        if (registrationDto.getPassword() == null || registrationDto.getPassword().isEmpty()) {
-            throw new UserRegistrationException("Password cannot be empty.");
+        if (userDto.getEmail() == null || userDto.getEmail().trim().isEmpty()) {
+            throw new IllegalArgumentException("Email cannot be empty.");
         }
-        if (!registrationDto.getPassword().equals(registrationDto.getConfirmPassword())) {
-            throw new UserRegistrationException("Passwords do not match.");
-        }
-        if (userRepository.existsByUsername(username)) { // Check with normalized username
-            throw new UserRegistrationException("Username already exists: " + registrationDto.getUsername()); // Keep original case for user message
-        }
-        if (userRepository.existsByEmail(email)) { // Check with normalized email
-            throw new UserRegistrationException("Email already exists: " + registrationDto.getEmail()); // Keep original case for user message
+        if (userDto.getPassword() == null || userDto.getPassword().isEmpty()) {
+            throw new IllegalArgumentException("Password cannot be empty.");
         }
 
+        String username = userDto.getUsername().trim().toLowerCase();
+        String email = userDto.getEmail().trim().toLowerCase();
+
+        if (userRepository.existsByUsername(username)) {
+            throw new IllegalArgumentException("Username already exists: " + userDto.getUsername());
+        }
+        if (userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Email already exists: " + userDto.getEmail());
+        }
 
         User newUser = new User();
         newUser.setUsername(username);
+        newUser.setName(userDto.getName() != null ? userDto.getName().trim() : username); // Set name or default to username
         newUser.setEmail(email);
-        newUser.setPassword(passwordEncoder.encode(registrationDto.getPassword()));
-        newUser.setEnabled(true); // Enable user by default
+        newUser.setPassword(passwordEncoder.encode(userDto.getPassword()));
+        newUser.setEnabled(true);
 
-        // --- UPDATED SECTION ---
-        // Set designation and specialization from the DTO
-        // It's good practice to check if they are provided and not empty,
-        // though your User entity might allow nulls for these.
-        if (registrationDto.getDesignation() != null && !registrationDto.getDesignation().trim().isEmpty()) {
-            newUser.setDesignation(registrationDto.getDesignation().trim());
-        }
-        if (registrationDto.getSpecialization() != null && !registrationDto.getSpecialization().trim().isEmpty()) {
-            newUser.setSpecialization(registrationDto.getSpecialization().trim());
-        }
-        // --- END OF UPDATED SECTION ---
-
-        // Assign a default role, e.g., "ROLE_USER"
+        // Set the specified role
         Set<Role> userRoles = new HashSet<>();
-        Role userRole = roleRepository.findByName("ROLE_USER")
+        Role userRole = roleRepository.findByName(userDto.getRole())
                 .orElseGet(() -> {
-                    // If "ROLE_USER" doesn't exist, create and save it.
-                    // In a real app, you might want to ensure roles are pre-populated.
-                    Role newRole = new Role("ROLE_USER");
+                    // If the specified role doesn't exist, create it
+                    Role newRole = new Role(userDto.getRole());
                     return roleRepository.save(newRole);
                 });
         userRoles.add(userRole);
         newUser.setRoles(userRoles);
+
+        // Set organization from admin user
+        if (adminUser.getOrganization() != null) {
+            newUser.setOrganization(adminUser.getOrganization());
+        } else {
+            throw new IllegalArgumentException("Admin user must belong to an organization to create users.");
+        }
 
         return userRepository.save(newUser);
     }
@@ -164,19 +159,6 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    /**
-     * Custom exception for user registration specific errors.
-     */
-    public static class UserRegistrationException extends RuntimeException {
-        public UserRegistrationException(String message) {
-            super(message);
-        }
-
-        public UserRegistrationException(String message, Throwable cause) {
-            super(message, cause);
-        }
-    }
-
     @Transactional(readOnly = true) // Good for read operations and managing LAZY loading
     public Optional<User> findByUsernameForProfile(String username) { // Or whatever you call it
         Optional<User> userOptional = userRepository.findByUsername(username.trim().toLowerCase());
@@ -215,6 +197,30 @@ public class UserService {
             return userRepository.save(user);
         }
         return user; // User was already an admin or no change needed
+    }
+
+    /**
+     * Changes a user's password (admin only method)
+     *
+     * @param userId The ID of the user whose password to change
+     * @param newPassword The new password to set
+     * @return The updated User object
+     * @throws IllegalArgumentException if user not found or password is invalid
+     */
+    @Transactional
+    public User changeUserPassword(Long userId, String newPassword) throws IllegalArgumentException {
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            throw new IllegalArgumentException("New password cannot be empty.");
+        }
+        if (newPassword.length() < 6) {
+            throw new IllegalArgumentException("Password must be at least 6 characters long.");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+
+        user.setPassword(passwordEncoder.encode(newPassword.trim()));
+        return userRepository.save(user);
     }
 
     // Optional: Custom exception for role not found

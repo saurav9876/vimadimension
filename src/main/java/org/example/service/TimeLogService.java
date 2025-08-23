@@ -122,12 +122,12 @@ public class TimeLogService {
             // Or throw an exception, or return empty list based on desired behavior
             return List.of();
         }
-        return timeLogRepository.findByTaskId(taskId);
+        return timeLogRepository.findByTask_Id(taskId);
     }
 
     public List<TimeLog> getTimeLogsForCurrentUser() {
         User currentUser = getCurrentAuthenticatedUser();
-        return timeLogRepository.findByUserId(currentUser.getId());
+        return timeLogRepository.findByUser_Id(currentUser.getId());
     }
 
     public List<TimeLog> getTimeLogsForUser(Long userId) {
@@ -135,7 +135,7 @@ public class TimeLogService {
             logger.warn("Attempt to get time logs for non-existent user ID: {}", userId);
             return List.of();
         }
-        return timeLogRepository.findByUserId(userId);
+        return timeLogRepository.findByUser_Id(userId);
     }
 
     /**

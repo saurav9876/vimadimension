@@ -1,5 +1,7 @@
 package org.example.dto;
 
+import org.example.models.enums.ProjectStage;
+
 // Consider adding validation annotations later (e.g., from jakarta.validation.constraints)
 // import jakarta.validation.constraints.NotBlank;
 // import jakarta.validation.constraints.NotNull;
@@ -13,6 +15,9 @@ public class TaskCreateDto {
 
     // @Size(max = 5000, message = "Description cannot exceed 5000 characters")
     private String description;
+
+    // @NotNull(message = "Project stage cannot be null")
+    private ProjectStage projectStage;
 
     // @NotNull(message = "Project ID cannot be null")
     private Long projectId;
@@ -34,6 +39,14 @@ public class TaskCreateDto {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public ProjectStage getProjectStage() {
+        return projectStage;
+    }
+
+    public void setProjectStage(ProjectStage projectStage) {
+        this.projectStage = projectStage;
     }
 
     public Long getProjectId() {

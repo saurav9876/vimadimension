@@ -2,11 +2,10 @@ package org.example.controller;
 
 import org.example.dto.ProjectCreateDto;
 import org.example.dto.ProjectUpdateDto;
+import org.example.dto.TaskCreateDto;
 import org.example.models.Project;
-// import org.example.models.Task; // Uncomment if you plan to list tasks on project details
 import org.example.models.Task;
 import org.example.service.ProjectService;
-// import org.example.service.TaskService; // Uncomment if you need to fetch tasks
 import org.example.service.TaskService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,23 +13,25 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize; // For method-level security
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import jakarta.validation.Valid; // For DTO validation
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
 
-@Controller
-@RequestMapping("/projects")
+@RestController
+@RequestMapping("/api/projects")
 public class ProjectController {
 
     private static final Logger logger = LoggerFactory.getLogger(ProjectController.class);
 
     private final ProjectService projectService;
-    private final TaskService taskService; // Inject if you want to show tasks on project detail page
+    private final TaskService taskService;
 
     @Autowired
     public ProjectController(ProjectService projectService, TaskService taskService) {
@@ -38,181 +39,230 @@ public class ProjectController {
         this.taskService = taskService;
     }
 
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, Object>> healthCheck() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            // Test database connection by trying to count projects
+            long projectCount = projectService.findAllProjects().size();
+            response.put("status", "healthy");
+            response.put("database", "connected");
+            response.put("projectCount", projectCount);
+            response.put("timestamp", System.currentTimeMillis());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Health check failed: {}", e.getMessage(), e);
+            response.put("status", "unhealthy");
+            response.put("database", "disconnected");
+            response.put("error", e.getMessage());
+            response.put("timestamp", System.currentTimeMillis());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+    
+    @PostMapping("/test")
+    public ResponseEntity<Map<String, Object>> testPost(@RequestBody(required = false) Map<String, Object> requestBody) {
+        logger.info("POST /projects/test endpoint hit!");
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "POST endpoint is working");
+        response.put("timestamp", System.currentTimeMillis());
+        response.put("requestBody", requestBody);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping
-    public String listProjects(Model model) {
-        List<Project> projects = projectService.findAllProjects(); // Updated method name
-        model.addAttribute("projects", projects);
-        logger.info("Listing all projects. Found: {} projects.", projects.size());
-        return "projects/list-projects"; // Assumes src/main/resources/templates/projects/list-projects.html
+    public ResponseEntity<List<Project>> listProjects(Authentication authentication) {
+        try {
+            if (authentication == null || !authentication.isAuthenticated()) {
+                logger.warn("Unauthenticated request to list projects");
+                return ResponseEntity.status(401).build();
+            }
+            
+            String username = authentication.getName();
+            logger.info("Attempting to list projects for user: {}", username);
+            List<Project> projects = projectService.findProjectsByOrganization(username);
+            logger.info("Successfully listed projects for user {}. Found: {} projects.", username, projects.size());
+            return ResponseEntity.ok(projects);
+        } catch (Exception e) {
+            logger.error("Error listing projects: {}", e.getMessage(), e);
+            throw e; // Re-throw to see the full stack trace
+        }
     }
 
     @GetMapping("/new")
     @PreAuthorize("isAuthenticated()")
-    public String showCreateProjectForm(Model model) {
-        // This line is crucial for the form to work
-        model.addAttribute("projectCreateDto", new ProjectCreateDto());
-        return "projects/create-project-form"; // The Thymeleaf template for the form
+    public ResponseEntity<Map<String, Object>> showCreateProjectForm() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("projectCreateDto", new ProjectCreateDto());
+        return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/save") // Or whatever your POST mapping is for saving
-    public String saveProject(@Valid @ModelAttribute("projectCreateDto") ProjectCreateDto projectDto,
+    @PostMapping("/save")
+    public ResponseEntity<?> saveProject(@ModelAttribute("projectCreateDto") ProjectCreateDto projectDto,
                               BindingResult result,
-                                 Authentication authentication, // Inject Authentication
-                              RedirectAttributes redirectAttributes,
-                              Model model) {
+                              Authentication authentication) {
+        logger.info("Received project creation request: {}", projectDto.getName());
+        
         if (result.hasErrors()) {
-            // If you re-render the form, ensure the model has what it needs
-            // model.addAttribute("projectCreateDto", projectDto); // Already there via @ModelAttribute
-            return "projects/create-project-form";
+            logger.warn("Validation errors: {}", result.getAllErrors());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("errors", result.getAllErrors());
+            return ResponseEntity.badRequest().body(errorResponse);
         }
 
         if (authentication == null || !authentication.isAuthenticated()) {
-            // Should not happen if endpoint is secured, but good for robustness
-            redirectAttributes.addFlashAttribute("errorMessage", "User not authenticated.");
-            return "redirect:/login";
+            logger.warn("Unauthenticated project creation attempt");
+            return ResponseEntity.status(401).body(Map.of("success", false, "error", "User not authenticated."));
         }
-        String currentUsername = authentication.getName(); // Get the username of the logged-in user
+        String currentUsername = authentication.getName();
+        logger.info("Creating project for user: {}", currentUsername);
 
         try {
-            Project savedProject = projectService.createProject(projectDto, currentUsername); // Pass username
-            redirectAttributes.addFlashAttribute("successMessage", "Project '" + savedProject.getName() + "' created successfully!");
-            return "redirect:/projects/" + savedProject.getId() + "/details"; // Or to the user profile, or project list
+            Project savedProject = projectService.createProject(projectDto, currentUsername);
+            logger.info("Project created successfully: {}", savedProject.getName());
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Project '" + savedProject.getName() + "' created successfully!");
+            response.put("project", savedProject);
+            return ResponseEntity.ok(response);
         } catch (UsernameNotFoundException e) {
-            // This specific catch might be for if the username from authentication suddenly isn't in the DB
-            redirectAttributes.addFlashAttribute("errorMessage", "Error: Creator user not found. " + e.getMessage());
-            return "projects/create-project-form";
-        }
-        catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Error creating project: " + e.getMessage());
-            // Log the exception e.printStackTrace(); or logger.error("...", e);
-            return "projects/create-project-form";
-        }
-    }
-
-    @PostMapping("/create") // Changed from just @PostMapping to be more explicit
-    @PreAuthorize("isAuthenticated()")
-    public String createProject(
-            // @Valid @ModelAttribute("projectCreateDto") ProjectCreateDto projectCreateDto, // Uncomment for validation
-            @ModelAttribute("projectCreateDto") ProjectCreateDto projectCreateDto,
-            BindingResult result,
-            RedirectAttributes redirectAttributes) {
-
-        if (result.hasErrors()) {
-            logger.warn("Validation errors while creating project: {}", result.getAllErrors());
-            // If using @Valid, the DTO with errors is already in the model.
-            // No need to add projectCreateDto again unless you clear it.
-            return "projects/create-project-form"; // Return to form to show errors
-        }
-
-        try {
-            Project createdProject = projectService.createProject(projectCreateDto);
-            redirectAttributes.addFlashAttribute("successMessage", "Project '" + createdProject.getName() + "' created successfully!");
-            logger.info("Project created successfully with ID: {} and name: {}", createdProject.getId(), createdProject.getName());
-            return "redirect:/projects";
-        } catch (IllegalArgumentException e) {
+            logger.error("User not found during project creation: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Error: Creator user not found. " + e.getMessage()));
+        } catch (Exception e) {
             logger.error("Error creating project: {}", e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-            // Add the DTO back to the model to repopulate the form with entered values
-            // model.addAttribute("projectCreateDto", projectCreateDto); // Not needed if @ModelAttribute handles it
-            return "redirect:/projects/new"; // Redirect back to the form, error message will be shown
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Error creating project: " + e.getMessage()));
         }
     }
-
 
     @GetMapping("/{id}/details")
-    public String showProjectDetails(@PathVariable("id") Long projectId, Model model, RedirectAttributes redirectAttributes) {
+    public ResponseEntity<?> showProjectDetails(@PathVariable("id") Long projectId) {
         Optional<Project> projectOptional = projectService.findById(projectId);
         if (projectOptional.isEmpty()) {
             logger.warn("Attempted to view details for non-existent project ID: {}", projectId);
-            redirectAttributes.addFlashAttribute("errorMessage", "Project not found.");
-            return "redirect:/projects";
+            return ResponseEntity.notFound().build();
         }
         Project project = projectOptional.get();
-        model.addAttribute("project", project);
 
         // Fetch and add tasks for this project
         List<Task> tasks = taskService.getTasksByProjectId(projectId);
-        model.addAttribute("tasks", tasks);
 
         logger.debug("Displaying details for project ID: {} with {} tasks.", projectId, tasks.size());
-        return "projects/project-details"; // Path to the HTML file above
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("project", project);
+        response.put("tasks", tasks);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}/edit")
     @PreAuthorize("isAuthenticated()")
-    public String showUpdateProjectForm(@PathVariable("id") Long projectId, Model model, RedirectAttributes redirectAttributes) {
+    public ResponseEntity<?> showUpdateProjectForm(@PathVariable("id") Long projectId) {
         Optional<Project> projectOptional = projectService.findById(projectId);
         if (projectOptional.isEmpty()) {
             logger.warn("Attempted to edit non-existent project ID: {}", projectId);
-            redirectAttributes.addFlashAttribute("errorMessage", "Project not found.");
-            return "redirect:/projects";
+            return ResponseEntity.notFound().build();
         }
 
         Project project = projectOptional.get();
         ProjectUpdateDto projectUpdateDto = new ProjectUpdateDto();
         projectUpdateDto.setName(project.getName());
+        projectUpdateDto.setClientName(project.getClientName());
+        projectUpdateDto.setStartDate(project.getStartDate());
+        projectUpdateDto.setEstimatedEndDate(project.getEstimatedEndDate());
+        projectUpdateDto.setLocation(project.getLocation());
+        projectUpdateDto.setProjectCategory(project.getProjectCategory());
+        projectUpdateDto.setStatus(project.getStatus());
+        projectUpdateDto.setProjectStage(project.getProjectStage());
         projectUpdateDto.setDescription(project.getDescription());
 
-        model.addAttribute("projectUpdateDto", projectUpdateDto);
-        model.addAttribute("projectId", projectId); // To construct the form action URL
         logger.debug("Displaying edit form for project ID: {}", projectId);
-        return "projects/project-edit-form"; // Assumes src/main/resources/templates/projects/project-edit-form.html
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("projectUpdateDto", projectUpdateDto);
+        response.put("projectId", projectId);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{id}/update")
     @PreAuthorize("isAuthenticated()")
-    public String updateProject(@PathVariable("id") Long projectId,
-                                // @Valid @ModelAttribute("projectUpdateDto") ProjectUpdateDto projectUpdateDto, // Uncomment for validation
+    public ResponseEntity<?> updateProject(@PathVariable("id") Long projectId,
                                 @ModelAttribute("projectUpdateDto") ProjectUpdateDto projectUpdateDto,
-                                BindingResult result,
-                                RedirectAttributes redirectAttributes,
-                                Model model) { // Added Model for re-displaying form on error
+                                BindingResult result) {
 
         if (result.hasErrors()) {
             logger.warn("Validation errors while updating project ID {}: {}", projectId, result.getAllErrors());
-            model.addAttribute("projectId", projectId); // Keep projectId for the form action
-            // projectUpdateDto is already in model due to @ModelAttribute
-            return "projects/project-edit-form";
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("errors", result.getAllErrors());
+            return ResponseEntity.badRequest().body(errorResponse);
         }
 
         try {
             projectService.updateProject(projectId, projectUpdateDto);
-            redirectAttributes.addFlashAttribute("successMessage", "Project updated successfully!");
             logger.info("Project ID {} updated successfully.", projectId);
-            return "redirect:/projects/" + projectId + "/details";
+            return ResponseEntity.ok(Map.of("message", "Project updated successfully!"));
         } catch (IllegalArgumentException e) {
             logger.error("Error updating project ID {}: {}", projectId, e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-            // To repopulate the form with the submitted (but failed) data and show errors
-            // model.addAttribute("projectUpdateDto", projectUpdateDto); // Already in model
-            // model.addAttribute("projectId", projectId);
-            // return "projects/project-edit-form";
-            return "redirect:/projects/" + projectId + "/edit"; // Redirect back to edit form
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
     @PostMapping("/{id}/delete")
-    @PreAuthorize("isAuthenticated()") // Consider more specific authorization (e.g., project owner/admin)
-    public String deleteProject(@PathVariable("id") Long projectId, RedirectAttributes redirectAttributes) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> deleteProject(@PathVariable("id") Long projectId) {
         try {
             boolean deleted = projectService.deleteProject(projectId);
             if (deleted) {
-                redirectAttributes.addFlashAttribute("successMessage", "Project deleted successfully.");
                 logger.info("Project ID {} deleted successfully.", projectId);
+                return ResponseEntity.ok(Map.of("message", "Project deleted successfully."));
             } else {
-                // This case might not be reached if service throws exception for not found
-                redirectAttributes.addFlashAttribute("errorMessage", "Project not found or could not be deleted.");
                 logger.warn("Attempt to delete project ID {} failed, project not found or other issue.", projectId);
+                return ResponseEntity.badRequest().body(Map.of("error", "Project not found or could not be deleted."));
             }
         } catch (IllegalStateException e) {
-            // Catch specific exception for projects with tasks
             logger.warn("Attempt to delete project ID {} failed: {}", projectId, e.getMessage());
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-            return "redirect:/projects/" + projectId + "/details"; // Redirect to details page to show error
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (IllegalArgumentException e) {
             logger.error("Error deleting project ID {}: {}", projectId, e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", "Error deleting project: " + e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", "Error deleting project: " + e.getMessage()));
         }
-        return "redirect:/projects";
+    }
+
+    // Task creation endpoints
+    @PostMapping("/{projectId}/tasks")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> createTask(@PathVariable Long projectId,
+                                      @ModelAttribute TaskCreateDto taskCreateDto,
+                                      BindingResult result) {
+        logger.info("Received task creation request for project {}: name='{}', description='{}'", 
+                   projectId, taskCreateDto.getName(), taskCreateDto.getDescription());
+        
+        if (result.hasErrors()) {
+            logger.warn("Validation errors in task creation: {}", result.getAllErrors());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("errors", result.getAllErrors());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+
+        try {
+            Project project = projectService.findById(projectId)
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid project ID: " + projectId));
+            
+            logger.info("Creating task with name: '{}' for project: {}", taskCreateDto.getName(), projectId);
+            
+            taskService.createTask(
+                    taskCreateDto.getName(),
+                    taskCreateDto.getDescription(),
+                    taskCreateDto.getProjectStage(),
+                    projectId,
+                    Optional.ofNullable(taskCreateDto.getAssigneeId())
+            );
+            return ResponseEntity.ok(Map.of("message", "Task created successfully!"));
+        } catch (IllegalArgumentException e) {
+            logger.error("Error creating task for project ID {}: {}", projectId, e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }

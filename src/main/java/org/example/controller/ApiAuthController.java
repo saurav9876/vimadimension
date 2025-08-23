@@ -1,0 +1,110 @@
+package org.example.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import java.util.HashMap;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/auth")
+public class ApiAuthController {
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
+
+    @PostMapping("/login")
+    public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> loginRequest, HttpServletRequest request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            String username = loginRequest.get("username");
+            String password = loginRequest.get("password");
+            
+            if (username == null || password == null) {
+                response.put("success", false);
+                response.put("message", "Username and password are required");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Authenticate the user
+            Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(username, password)
+            );
+            
+            if (authentication.isAuthenticated()) {
+                // Create or get the session
+                HttpSession session = request.getSession(true);
+                System.out.println("Session created: " + session.getId());
+                
+                // Set the authentication in the SecurityContext
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                
+                // Save the SecurityContext to the session
+                securityContextRepository.saveContext(SecurityContextHolder.getContext(), request, null);
+                
+                System.out.println("Authentication saved to session: " + authentication.getName());
+                System.out.println("Session ID after save: " + session.getId());
+                
+                response.put("success", true);
+                response.put("message", "Login successful");
+                response.put("username", username);
+                response.put("sessionId", session.getId());
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("success", false);
+                response.put("message", "Authentication failed");
+                return ResponseEntity.status(401).body(response);
+            }
+            
+        } catch (AuthenticationException e) {
+            response.put("success", false);
+            response.put("message", "Invalid username or password");
+            return ResponseEntity.status(401).body(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Login failed: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @GetMapping("/status")
+    public ResponseEntity<Map<String, Object>> getAuthStatus(Authentication authentication, HttpServletRequest request) {
+        System.out.println("Status check - Authentication: " + (authentication != null ? authentication.getName() : "null"));
+        System.out.println("Status check - Session ID: " + (request.getSession(false) != null ? request.getSession(false).getId() : "no session"));
+        
+        if (authentication != null && authentication.isAuthenticated() && 
+            !"anonymousUser".equals(authentication.getPrincipal())) {
+            
+            Map<String, Object> userInfo = new HashMap<>();
+            
+            if (authentication.getPrincipal() instanceof UserDetails) {
+                UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+                userInfo.put("username", userDetails.getUsername());
+                userInfo.put("authorities", userDetails.getAuthorities());
+                userInfo.put("enabled", userDetails.isEnabled());
+            } else {
+                userInfo.put("username", authentication.getName());
+                userInfo.put("authorities", authentication.getAuthorities());
+            }
+            
+            return ResponseEntity.ok(userInfo);
+        }
+        
+        return ResponseEntity.status(401).build();
+    }
+}

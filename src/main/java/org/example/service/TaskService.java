@@ -3,6 +3,7 @@ package org.example.service;
 import org.example.models.Project;
 import org.example.models.Task;
 import org.example.models.enums.TaskStatus;
+import org.example.models.enums.ProjectStage;
 import org.example.models.User;
 import org.example.repository.ProjectRepository;
 import org.example.repository.TaskRepository;
@@ -59,9 +60,12 @@ public class TaskService {
     }
 
     @Transactional
-    public Task createTask(String name, String description, Long projectId, Optional<Long> assigneeIdOpt) {
+    public Task createTask(String name, String description, ProjectStage projectStage, Long projectId, Optional<Long> assigneeIdOpt) {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Task name cannot be empty.");
+        }
+        if (projectStage == null) {
+            throw new IllegalArgumentException("Project stage cannot be empty.");
         }
 
         Project project = projectRepository.findById(projectId)
@@ -77,6 +81,7 @@ public class TaskService {
         Task newTask = new Task();
         newTask.setName(name.trim());
         newTask.setDescription(description != null ? description.trim() : null);
+        newTask.setProjectStage(projectStage);
         newTask.setProject(project);
         newTask.setReporter(reporter);
         newTask.setAssignee(assignee);
@@ -183,6 +188,46 @@ public class TaskService {
         }
         // Return the task even if no fields were changed, or Optional.empty() if you prefer
         return Optional.of(taskToUpdate);
+    }
+
+    @Transactional
+    public Task updateTask(Long taskId, String name, String description, String projectStage, String status) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Task name cannot be empty.");
+        }
+        if (projectStage == null || projectStage.trim().isEmpty()) {
+            throw new IllegalArgumentException("Project stage cannot be empty.");
+        }
+        if (status == null || status.trim().isEmpty()) {
+            throw new IllegalArgumentException("Task status cannot be empty.");
+        }
+
+        Task taskToUpdate = taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("Task with ID " + taskId + " not found."));
+
+        // Parse enums
+        ProjectStage projectStageEnum;
+        try {
+            projectStageEnum = ProjectStage.valueOf(projectStage);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid project stage: " + projectStage);
+        }
+
+        TaskStatus statusEnum;
+        try {
+            statusEnum = TaskStatus.valueOf(status);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid task status: " + status);
+        }
+
+        // Update fields
+        taskToUpdate.setName(name.trim());
+        taskToUpdate.setDescription(description != null ? description.trim() : null);
+        taskToUpdate.setProjectStage(projectStageEnum);
+        taskToUpdate.setStatus(statusEnum);
+
+        // updatedAt is handled by @PreUpdate in Task entity
+        return taskRepository.save(taskToUpdate);
     }
 
     @Transactional

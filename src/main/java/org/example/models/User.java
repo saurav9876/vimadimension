@@ -2,6 +2,7 @@
 package org.example.models;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -17,6 +18,9 @@ public class User {
 //    @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
     @Column(unique = true, nullable = false)
     private String username;
+
+    @Column(length = 100)
+    private String name; // Full name of the user
 
     //    @NotBlank(message = "Password is required")
 //    @Size(min = 6, message = "Password must be at least 6 characters long")
@@ -60,7 +64,14 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "project_id")
     )
+    @JsonIgnore // Prevent circular reference during JSON serialization
     private Set<Project> accessibleProjects = new HashSet<>();
+
+    // --- Organization relationship ---
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_id", nullable = true)
+    @JsonIgnore // Prevent Hibernate proxy serialization issues
+    private Organization organization;
 
     // --- New field for Assigned Tasks ---
     // Assuming a Task is assigned to one User.
@@ -140,6 +151,14 @@ public class User {
         this.assignedTasks = assignedTasks;
     }
 
+    public Organization getOrganization() {
+        return organization;
+    }
+
+    public void setOrganization(Organization organization) {
+        this.organization = organization;
+    }
+
     // Helper methods for managing bidirectional relationship with Task (optional but good practice)
     public void addTask(Task task) {
         this.assignedTasks.add(task);
@@ -168,6 +187,14 @@ public class User {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getPassword() {

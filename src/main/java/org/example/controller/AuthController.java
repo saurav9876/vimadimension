@@ -2,23 +2,31 @@ package org.example.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
 public class AuthController {
 
-    @GetMapping("/login")
-    public String loginPage() {
-        // This tells Thymeleaf to look for login.html inside the 'projects' subdirectory
-        // of your templates folder (e.g., src/main/resources/templates/projects/login.html)
-        return "projects/login";
+    // Serve React app for specific frontend routes only
+    // Avoid /** patterns that might interfere with API endpoints
+    @GetMapping({"/", "/login", "/register"})
+    public String serveReactApp() {
+        return "forward:/index.html";
     }
-
-    // You can also add your @GetMapping for /register here if it's not already
-    // in RegistrationController, or ensure RegistrationController correctly
-    // returns "projects/register" if register.html is also in that subfolder.
-    // For example:
-    // @GetMapping("/register")
-    // public String registrationPage() {
-    //     return "projects/register"; // If register.html is also in templates/projects/
-    // }
+    
+    // Handle specific React routes without using /** patterns
+    @GetMapping({"/projects", "/projects/new"})
+    public String serveProjectRoutes() {
+        return "forward:/index.html";
+    }
+    
+    @GetMapping({"/tasks"})
+    public String serveTaskRoutes() {
+        return "forward:/index.html";
+    }
+    
+    @GetMapping({"/profile", "/admin", "/users"})
+    public String serveOtherRoutes() {
+        return "forward:/index.html";
+    }
 }

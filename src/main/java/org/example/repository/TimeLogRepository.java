@@ -13,8 +13,8 @@ import java.util.List;
 public interface TimeLogRepository extends JpaRepository<TimeLog, Long> {
     List<TimeLog> findByTask(Task task);
     List<TimeLog> findByUser(User user);
-    List<TimeLog> findByTaskId(Long taskId);
-    List<TimeLog> findByUserId(Long userId);
+    List<TimeLog> findByTask_Id(Long taskId);
+    List<TimeLog> findByUser_Id(Long userId);
     List<TimeLog> findByTaskAndDateLogged(Task task, LocalDate dateLogged);
     List<TimeLog> findByUserAndDateLoggedBetween(User user, LocalDate startDate, LocalDate endDate);
 }

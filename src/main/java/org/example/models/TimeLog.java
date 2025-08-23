@@ -1,6 +1,7 @@
 package org.example.models;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -16,10 +17,12 @@ public class TimeLog {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "task_id", nullable = false)
+    @JsonIgnore // Prevent Hibernate proxy serialization issues
     private Task task;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore // Prevent Hibernate proxy serialization issues
     private User user; // The user who logged this time
 
     @Column(name = "date_logged", nullable = false)
@@ -94,6 +97,19 @@ public class TimeLog {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    // Helper methods for safe access to related entity IDs
+    public Long getTaskId() {
+        return task != null ? task.getId() : null;
+    }
+
+    public Long getUserId() {
+        return user != null ? user.getId() : null;
+    }
+
+    public String getUsername() {
+        return user != null ? user.getUsername() : null;
     }
 
     @PrePersist

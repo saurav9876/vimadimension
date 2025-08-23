@@ -85,19 +85,75 @@ public class ProjectService {
     public List<Project> findAllProjects() { // Renamed for consistency
         return projectRepository.findAll();
     }
+    
+    public List<Project> findProjectsByOrganization(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        
+        if (user.getOrganization() == null) {
+            logger.warn("User {} does not belong to any organization. Returning empty project list.", username);
+            return List.of(); // Return empty list
+        }
+        
+        // This would require adding a method to ProjectRepository
+        // For now, let's filter from all projects (not optimal for large datasets)
+        return projectRepository.findAll().stream()
+                .filter(project -> project.getOrganization() != null && 
+                                 project.getOrganization().getId().equals(user.getOrganization().getId()))
+                .toList();
+    }
 
     @Transactional // This ensures all database operations are part of a single transaction
     public Project createProject(ProjectCreateDto projectCreateDto, String creatorUsername) {
-        Project project = new Project();
-        project.setName(projectCreateDto.getName());
-        project.setDescription(projectCreateDto.getDescription());
-        // ... set other project properties ...
-
-        Project savedProject = projectRepository.save(project); // Project is saved
-
+        // First, get the user to access their organization
         User creator = userRepository.findByUsername(creatorUsername)
                 .orElseThrow(() -> new UsernameNotFoundException(
                         "User not found: " + creatorUsername + ". Cannot assign project creator."));
+
+        // Check if user has an organization
+        if (creator.getOrganization() == null) {
+            logger.error("User {} does not belong to any organization. Cannot create project.", creatorUsername);
+            throw new IllegalStateException("User must belong to an organization to create projects.");
+        }
+
+        // Validate required fields
+        if (projectCreateDto.getName() == null || projectCreateDto.getName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Project name cannot be empty.");
+        }
+        if (projectCreateDto.getClientName() == null || projectCreateDto.getClientName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Client name cannot be empty.");
+        }
+        if (projectCreateDto.getStartDate() == null) {
+            throw new IllegalArgumentException("Start date cannot be empty.");
+        }
+        if (projectCreateDto.getLocation() == null || projectCreateDto.getLocation().trim().isEmpty()) {
+            throw new IllegalArgumentException("Location cannot be empty.");
+        }
+        if (projectCreateDto.getProjectCategory() == null) {
+            throw new IllegalArgumentException("Project category cannot be empty.");
+        }
+        if (projectCreateDto.getStatus() == null) {
+            throw new IllegalArgumentException("Project status cannot be empty.");
+        }
+        if (projectCreateDto.getProjectStage() == null) {
+            throw new IllegalArgumentException("Project stage cannot be empty.");
+        }
+
+        Project project = new Project();
+        project.setName(projectCreateDto.getName().trim());
+        project.setClientName(projectCreateDto.getClientName().trim());
+        project.setStartDate(projectCreateDto.getStartDate());
+        project.setEstimatedEndDate(projectCreateDto.getEstimatedEndDate());
+        project.setLocation(projectCreateDto.getLocation().trim());
+        project.setProjectCategory(projectCreateDto.getProjectCategory());
+        project.setStatus(projectCreateDto.getStatus());
+        project.setProjectStage(projectCreateDto.getProjectStage());
+        project.setDescription(projectCreateDto.getDescription() != null ? projectCreateDto.getDescription().trim() : null);
+        project.setOrganization(creator.getOrganization()); // Set the organization from the user
+        
+        logger.info("Creating project '{}' for organization: {}", project.getName(), creator.getOrganization().getName());
+
+        Project savedProject = projectRepository.save(project); // Project is saved with organization
 
         // Initialize the set if it's null (important for new users or if not eagerly fetched before)
         if (creator.getAccessibleProjects() == null) {
@@ -107,9 +163,8 @@ public class ProjectService {
 
         userRepository.save(creator); // CRUCIAL: Save the User entity to persist the relationship
 
-        // For debugging, you can log here:
-        // System.out.println("User " + creator.getUsername() + " now has " + creator.getAccessibleProjects().size() + " accessible projects.");
-        // creator.getAccessibleProjects().forEach(p -> System.out.println(" - " + p.getName()));
+        logger.info("Project '{}' created successfully for organization '{}' by user '{}'", 
+                   savedProject.getName(), creator.getOrganization().getName(), creatorUsername);
 
         return savedProject;
     }
@@ -148,6 +203,65 @@ public class ProjectService {
             }
         }
 
+        if (projectUpdateDto.getClientName() != null) {
+            String newClientName = projectUpdateDto.getClientName().trim();
+            if (newClientName.isEmpty()) {
+                logger.warn("Attempted to update project ID {} with an empty client name.", projectId);
+                throw new IllegalArgumentException("Client name cannot be updated to empty.");
+            }
+            if (!Objects.equals(projectToUpdate.getClientName(), newClientName)) {
+                projectToUpdate.setClientName(newClientName);
+                updated = true;
+            }
+        }
+
+        if (projectUpdateDto.getStartDate() != null) {
+            if (!Objects.equals(projectToUpdate.getStartDate(), projectUpdateDto.getStartDate())) {
+                projectToUpdate.setStartDate(projectUpdateDto.getStartDate());
+                updated = true;
+            }
+        }
+
+        if (projectUpdateDto.getEstimatedEndDate() != null) {
+            if (!Objects.equals(projectToUpdate.getEstimatedEndDate(), projectUpdateDto.getEstimatedEndDate())) {
+                projectToUpdate.setEstimatedEndDate(projectUpdateDto.getEstimatedEndDate());
+                updated = true;
+            }
+        }
+
+        if (projectUpdateDto.getLocation() != null) {
+            String newLocation = projectUpdateDto.getLocation().trim();
+            if (newLocation.isEmpty()) {
+                logger.warn("Attempted to update project ID {} with an empty location.", projectId);
+                throw new IllegalArgumentException("Location cannot be updated to empty.");
+            }
+            if (!Objects.equals(projectToUpdate.getLocation(), newLocation)) {
+                projectToUpdate.setLocation(newLocation);
+                updated = true;
+            }
+        }
+
+        if (projectUpdateDto.getProjectCategory() != null) {
+            if (!Objects.equals(projectToUpdate.getProjectCategory(), projectUpdateDto.getProjectCategory())) {
+                projectToUpdate.setProjectCategory(projectUpdateDto.getProjectCategory());
+                updated = true;
+            }
+        }
+
+        if (projectUpdateDto.getStatus() != null) {
+            if (!Objects.equals(projectToUpdate.getStatus(), projectUpdateDto.getStatus())) {
+                projectToUpdate.setStatus(projectUpdateDto.getStatus());
+                updated = true;
+            }
+        }
+
+        if (projectUpdateDto.getProjectStage() != null) {
+            if (!Objects.equals(projectToUpdate.getProjectStage(), projectUpdateDto.getProjectStage())) {
+                projectToUpdate.setProjectStage(projectUpdateDto.getProjectStage());
+                updated = true;
+            }
+        }
+
         if (projectUpdateDto.getDescription() != null) {
             // Allow setting description to empty or null if desired by passing an empty string or explicit null
             String newDescription = projectUpdateDto.getDescription(); // No trim here if you want to allow leading/trailing spaces intentionally, or trim if not.
@@ -156,7 +270,6 @@ public class ProjectService {
                 updated = true;
             }
         }
-
 
         if (updated) {
             Project savedProject = projectRepository.save(projectToUpdate);

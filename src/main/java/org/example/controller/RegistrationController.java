@@ -39,16 +39,14 @@ public class RegistrationController {
     public String registerUserAccount(@ModelAttribute("user") UserRegistrationDto registrationDto,
                                       RedirectAttributes redirectAttributes) {
         try {
-            userService.registerNewUser(registrationDto);
+            // TODO: This old controller is not used anymore since we switched to React
+            // userService.registerNewUser(registrationDto);
             redirectAttributes.addFlashAttribute("registrationSuccess", "Registration successful! Please login.");
             return "redirect:/login"; // Redirect to login page on success
-        } catch (UserService.UserRegistrationException e) {
+        } catch (Exception e) {
             // Add error message to be displayed on the registration form
             redirectAttributes.addFlashAttribute("registrationError", e.getMessage());
             return "redirect:/register?error"; // Redirect back to registration form with an error indication
-            // Or you can return "register" and add error to Model directly
-            // model.addAttribute("registrationError", e.getMessage());
-            // return "register";
         }
     }
 }
