@@ -5,14 +5,13 @@ const CreateUser = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
+    name: '',
     email: '',
     password: '',
     confirmPassword: '',
     designation: '',
     specialization: '',
     bio: '',
-    licenseNumber: '',
-    portfolioLink: '',
     role: 'ROLE_USER'
   });
   const [loading, setLoading] = useState(false);
@@ -59,13 +58,12 @@ const CreateUser = () => {
         credentials: 'include',
         body: JSON.stringify({
           username: formData.username,
+          name: formData.name,
           email: formData.email,
           password: formData.password,
           designation: formData.designation,
           specialization: formData.specialization,
           bio: formData.bio,
-          licenseNumber: formData.licenseNumber,
-          portfolioLink: formData.portfolioLink,
           role: formData.role
         })
       });
@@ -74,14 +72,13 @@ const CreateUser = () => {
         setSuccess('User created successfully!');
         setFormData({
           username: '',
+          name: '',
           email: '',
           password: '',
           confirmPassword: '',
           designation: '',
           specialization: '',
           bio: '',
-          licenseNumber: '',
-          portfolioLink: '',
           role: 'ROLE_USER'
         });
       } else {
@@ -139,6 +136,21 @@ const CreateUser = () => {
             </div>
 
             <div className="form-group">
+              <label htmlFor="name">Name *:</label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                placeholder="Enter name"
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
               <label htmlFor="email">Email *:</label>
               <input
                 type="email"
@@ -150,9 +162,7 @@ const CreateUser = () => {
                 placeholder="Enter email"
               />
             </div>
-          </div>
 
-          <div className="form-row">
             <div className="form-group">
               <label htmlFor="password">Password *:</label>
               <input
@@ -165,7 +175,9 @@ const CreateUser = () => {
                 placeholder="Enter password"
               />
             </div>
+          </div>
 
+          <div className="form-row">
             <div className="form-group">
               <label htmlFor="confirmPassword">Confirm Password *:</label>
               <input
@@ -178,9 +190,7 @@ const CreateUser = () => {
                 placeholder="Confirm password"
               />
             </div>
-          </div>
 
-          <div className="form-row">
             <div className="form-group">
               <label htmlFor="designation">Designation:</label>
               <input
@@ -192,7 +202,9 @@ const CreateUser = () => {
                 placeholder="Enter designation"
               />
             </div>
+          </div>
 
+          <div className="form-row">
             <div className="form-group">
               <label htmlFor="specialization">Specialization:</label>
               <input
@@ -202,32 +214,6 @@ const CreateUser = () => {
                 value={formData.specialization}
                 onChange={handleChange}
                 placeholder="Enter specialization"
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="licenseNumber">License Number:</label>
-              <input
-                type="text"
-                id="licenseNumber"
-                name="licenseNumber"
-                value={formData.licenseNumber}
-                onChange={handleChange}
-                placeholder="Enter license number"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="portfolioLink">Portfolio Link:</label>
-              <input
-                type="url"
-                id="portfolioLink"
-                name="portfolioLink"
-                value={formData.portfolioLink}
-                onChange={handleChange}
-                placeholder="Enter portfolio URL"
               />
             </div>
           </div>

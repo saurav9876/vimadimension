@@ -1,6 +1,6 @@
 plugins {
     id("java")
-    id("org.springframework.boot") version "3.2.0" // Apply Spring Boot plugin
+    id("org.springframework.boot") version "3.4.0" // Updated to support Java 23
     id("io.spring.dependency-management") version "1.1.4"
 }
 
@@ -11,7 +11,7 @@ version = "1.0-SNAPSHOT"
 // Add this block to specify the Java version for your project
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21)) // Or 21, if you prefer and your setup supports it
+        languageVersion.set(JavaLanguageVersion.of(23)) // Updated to Java 23
     }
 }
 

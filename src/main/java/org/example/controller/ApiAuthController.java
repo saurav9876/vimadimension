@@ -1,5 +1,6 @@
 package org.example.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -7,7 +8,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
@@ -18,12 +18,18 @@ import jakarta.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.example.models.User;
+import org.example.service.UserService;
+
 @RestController
 @RequestMapping("/api/auth")
 public class ApiAuthController {
 
     @Autowired
     private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private UserService userService;
 
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
 
@@ -90,19 +96,40 @@ public class ApiAuthController {
         if (authentication != null && authentication.isAuthenticated() && 
             !"anonymousUser".equals(authentication.getPrincipal())) {
             
-            Map<String, Object> userInfo = new HashMap<>();
-            
-            if (authentication.getPrincipal() instanceof UserDetails) {
-                UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-                userInfo.put("username", userDetails.getUsername());
-                userInfo.put("authorities", userDetails.getAuthorities());
-                userInfo.put("enabled", userDetails.isEnabled());
-            } else {
+            try {
+                String username = authentication.getName();
+                User user = userService.findByUsernameWithOrganization(username)
+                        .orElseThrow(() -> new RuntimeException("User not found"));
+                
+                Map<String, Object> userInfo = new HashMap<>();
+                userInfo.put("id", user.getId());
+                userInfo.put("username", user.getUsername());
+                userInfo.put("name", user.getName());
+                userInfo.put("email", user.getEmail());
+                userInfo.put("enabled", user.isEnabled());
+                userInfo.put("organizationName", user.getOrganization() != null ? user.getOrganization().getName() : null);
+                userInfo.put("designation", user.getDesignation());
+                userInfo.put("specialization", user.getSpecialization());
+                userInfo.put("bio", user.getBio());
+                
+                // Add authorities if available
+                if (authentication.getPrincipal() instanceof UserDetails) {
+                    UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+                    userInfo.put("authorities", userDetails.getAuthorities());
+                } else {
+                    userInfo.put("authorities", authentication.getAuthorities());
+                }
+                
+                return ResponseEntity.ok(userInfo);
+            } catch (Exception e) {
+                System.err.println("Error fetching user profile: " + e.getMessage());
+                // Fallback to basic info if profile fetch fails
+                Map<String, Object> userInfo = new HashMap<>();
                 userInfo.put("username", authentication.getName());
                 userInfo.put("authorities", authentication.getAuthorities());
+                userInfo.put("enabled", true);
+                return ResponseEntity.ok(userInfo);
             }
-            
-            return ResponseEntity.ok(userInfo);
         }
         
         return ResponseEntity.status(401).build();

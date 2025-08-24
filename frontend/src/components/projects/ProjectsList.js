@@ -82,9 +82,14 @@ const ProjectsList = ({ user }) => {
             <div key={project.id} className="project-card">
               <div className="project-header">
                 <h3>{project.name}</h3>
-                <span className={`project-status status-${project.status?.toLowerCase().replace(' ', '-')}`}>
-                  {project.status?.replace('_', ' ')}
-                </span>
+                <div className="project-badges">
+                  <span className={`project-status status-${project.status?.toLowerCase().replace(' ', '-')}`}>
+                    {project.status?.replace('_', ' ')}
+                  </span>
+                  <span className={`priority-badge ${project.priority?.toLowerCase().replace(' ', '-')}-priority`}>
+                    {project.priority?.replace('_', ' ')}
+                  </span>
+                </div>
               </div>
               
               <div className="project-info">
@@ -122,6 +127,26 @@ const ProjectsList = ({ user }) => {
                   <div className="info-row">
                     <span className="info-label">Description:</span>
                     <span className="info-value">{project.description}</span>
+                  </div>
+                )}
+                {project.budget && (
+                  <div className="info-row">
+                    <span className="info-label">Budget:</span>
+                    <span className="info-value">${parseFloat(project.budget).toLocaleString()}</span>
+                  </div>
+                )}
+                {project.actualCost && (
+                  <div className="info-row">
+                    <span className="info-label">Actual Cost:</span>
+                    <span className="info-value">${parseFloat(project.actualCost).toLocaleString()}</span>
+                  </div>
+                )}
+                {project.budget && project.actualCost && (
+                  <div className="info-row">
+                    <span className="info-label">Cost Status:</span>
+                    <span className={`info-value ${parseFloat(project.actualCost) > parseFloat(project.budget) ? 'text-danger' : 'text-success'}`}>
+                      {parseFloat(project.actualCost) > parseFloat(project.budget) ? 'Over Budget' : 'Under Budget'}
+                    </span>
                   </div>
                 )}
               </div>

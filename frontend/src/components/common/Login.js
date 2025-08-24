@@ -78,7 +78,7 @@ const Login = ({ onLogin }) => {
       <div className="login-container">
         <div className="login-logo-container text-center mb-4">
           <img 
-            src="/images/firm-logo.jpeg" 
+                                src="/images/firm-logo.jpg" 
             alt="VIMA - The Dimension Logo" 
             style={{ maxHeight: '100px', width: 'auto' }}
             className="mb-3"
@@ -130,7 +130,7 @@ const Login = ({ onLogin }) => {
         </form>
 
         <div className="options-link">
-          <p>Don't have an account? <Link to="/register">Register your organization</Link></p>
+          <p>Don't have an account? Contact your organization administrator to get access.</p>
         </div>
       </div>
     </div>

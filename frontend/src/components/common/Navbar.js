@@ -15,12 +15,21 @@ const Navbar = ({ user, onLogout }) => {
     return hasRole('ROLE_ADMIN');
   };
 
+  // Get organization name from user data
+  const getOrganizationName = () => {
+    if (user?.organizationName) {
+      return user.organizationName;
+    }
+    // Fallback to username if no organization name
+    return user?.username || 'User';
+  };
+
   return (
     <nav className="navbar">
       <div className="navbar-container">
         <a href="https://www.vimathedimension.com/" className="navbar-brand" target="_blank" rel="noopener noreferrer">
-          <img src="http://localhost:8080/images/firm-logo.jpeg" alt="VIMA Logo" className="navbar-logo" />
-          <span className="navbar-brand-text">VIMA - THE DIMENSION</span>
+                          <img src="/images/firm-logo.jpg" alt="Organization Logo" className="navbar-logo" />
+          <span className="navbar-brand-text">{getOrganizationName()}</span>
         </a>
         <ul className="navbar-nav">
           <li>
@@ -29,11 +38,6 @@ const Navbar = ({ user, onLogout }) => {
           <li>
             <Link to="/projects" className="nav-link">Projects</Link>
           </li>
-          {(hasRole('ROLE_ADMIN') || hasRole('ROLE_MANAGER')) && (
-            <li>
-              <Link to="/projects/new" className="nav-link">New Project</Link>
-            </li>
-          )}
           {isAdmin() && (
             <li>
               <Link to="/admin/dashboard" className="nav-link">Admin Dashboard</Link>

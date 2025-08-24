@@ -7,9 +7,7 @@ const UsersList = () => {
   const [error, setError] = useState('');
   const [authorized, setAuthorized] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [passwordChangeModal, setPasswordChangeModal] = useState({ show: false, userId: null, username: '' });
-  const [newPassword, setNewPassword] = useState('');
-  const [changingPassword, setChangingPassword] = useState(false);
+  const [togglingStatus, setTogglingStatus] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,54 +68,40 @@ const UsersList = () => {
     }
   };
 
-  const handlePasswordChange = async (e) => {
-    e.preventDefault();
-    if (!newPassword.trim() || newPassword.length < 6) {
-      setError('Password must be at least 6 characters long');
-      return;
-    }
-
-    setChangingPassword(true);
+  const handleToggleUserStatus = async (userId, currentStatus) => {
+    if (togglingStatus) return;
+    
+    setTogglingStatus(true);
     setError('');
 
     try {
-      const response = await fetch(`/api/admin/users/${passwordChangeModal.userId}/change-password`, {
+      const response = await fetch(`/api/admin/users/${userId}/toggle-status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ newPassword: newPassword.trim() }),
+        body: JSON.stringify({ enabled: !currentStatus }),
         credentials: 'include'
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setPasswordChangeModal({ show: false, userId: null, username: '' });
-        setNewPassword('');
-        // Refresh users list
-        fetchUsers();
+        // Update the user in the local state
+        setUsers(users.map(user => 
+          user.id === userId 
+            ? { ...user, enabled: !currentStatus }
+            : user
+        ));
       } else {
-        setError(data.error || 'Failed to change password');
+        setError(data.error || 'Failed to update user status');
       }
     } catch (error) {
-      console.error('Error changing password:', error);
-      setError('Failed to change password');
+      console.error('Error toggling user status:', error);
+      setError('Failed to update user status');
     } finally {
-      setChangingPassword(false);
+      setTogglingStatus(false);
     }
-  };
-
-  const openPasswordChangeModal = (userId, username) => {
-    setPasswordChangeModal({ show: true, userId, username });
-    setNewPassword('');
-    setError('');
-  };
-
-  const closePasswordChangeModal = () => {
-    setPasswordChangeModal({ show: false, userId: null, username: '' });
-    setNewPassword('');
-    setError('');
   };
 
   if (checkingAuth) {
@@ -140,14 +124,22 @@ const UsersList = () => {
 
   return (
     <div className="main-content">
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="page-header">
         <h1 className="page-title">All Users</h1>
-        <button 
-          onClick={() => navigate('/admin/users/create')} 
-          className="btn-primary"
-        >
-          Create New User
-        </button>
+        <div className="page-actions">
+          <button 
+            onClick={() => navigate('/admin/dashboard')} 
+            className="btn-outline"
+          >
+            Back to Admin Dashboard
+          </button>
+          <button 
+            onClick={() => navigate('/admin/users/create')} 
+            className="btn-primary"
+          >
+            Create New User
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -171,7 +163,10 @@ const UsersList = () => {
               
               <div className="user-details">
                 <p><strong>Username:</strong> {user.username}</p>
-                <p><strong>Email:</strong> {user.email}</p>
+                {user.email && <p><strong>Email:</strong> {user.email}</p>}
+                {user.designation && <p><strong>Designation:</strong> {user.designation}</p>}
+                {user.specialization && <p><strong>Specialization:</strong> {user.specialization}</p>}
+                {user.bio && <p><strong>Bio:</strong> {user.bio}</p>}
                 <p><strong>Status:</strong> 
                   <span className={`status-badge ${user.enabled ? 'active' : 'inactive'}`}>
                     {user.enabled ? 'Active' : 'Inactive'}
@@ -181,65 +176,15 @@ const UsersList = () => {
 
               <div className="user-actions">
                 <button 
-                  onClick={() => openPasswordChangeModal(user.id, user.username)}
+                  onClick={() => handleToggleUserStatus(user.id, user.enabled)}
                   className="btn-small btn-outline"
+                  disabled={togglingStatus}
                 >
-                  Change Password
+                  {togglingStatus ? 'Toggling...' : user.enabled ? 'Deactivate' : 'Activate'}
                 </button>
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Password Change Modal */}
-      {passwordChangeModal.show && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
-              <h3>Change Password for {passwordChangeModal.username}</h3>
-              <button onClick={closePasswordChangeModal} className="close-btn">&times;</button>
-            </div>
-            
-            <form onSubmit={handlePasswordChange}>
-              <div className="form-group">
-                <label htmlFor="newPassword">New Password:</label>
-                <input
-                  type="password"
-                  id="newPassword"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  minLength="6"
-                  placeholder="Enter new password (min 6 characters)"
-                />
-              </div>
-
-              {error && (
-                <div className="alert alert-danger">
-                  {error}
-                </div>
-              )}
-
-              <div className="modal-actions">
-                <button 
-                  type="button" 
-                  onClick={closePasswordChangeModal}
-                  className="btn-outline"
-                  disabled={changingPassword}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn-primary"
-                  disabled={changingPassword}
-                >
-                  {changingPassword ? 'Changing...' : 'Change Password'}
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
     </div>

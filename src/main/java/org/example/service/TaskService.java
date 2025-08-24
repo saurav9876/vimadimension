@@ -99,6 +99,19 @@ public class TaskService {
         return taskRepository.findAll();
     }
 
+    /**
+     * Counts tasks by organization.
+     *
+     * @param organizationId The ID of the organization.
+     * @return The count of tasks belonging to the specified organization.
+     */
+    public long countTasksByOrganization(Long organizationId) {
+        if (organizationId == null) {
+            throw new IllegalArgumentException("Organization ID cannot be null");
+        }
+        return taskRepository.countByProject_Organization_Id(organizationId);
+    }
+
     public List<Task> getTasksByProjectId(Long projectId) {
         if (projectId == null) {
             throw new IllegalArgumentException("Project ID cannot be null.");

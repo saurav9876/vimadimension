@@ -48,7 +48,7 @@ const App = () => {
 
   const handleLogout = async () => {
     try {
-      await fetch('/logout', {
+      await fetch('/api/logout', {
         method: 'POST',
         credentials: 'include'
       });

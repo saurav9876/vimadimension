@@ -159,6 +159,32 @@ public class UserService {
         return userRepository.findAll();
     }
 
+    /**
+     * Retrieves users by organization.
+     *
+     * @param organizationId The ID of the organization.
+     * @return A list of users belonging to the specified organization.
+     */
+    public List<User> findUsersByOrganization(Long organizationId) {
+        if (organizationId == null) {
+            throw new IllegalArgumentException("Organization ID cannot be null");
+        }
+        return userRepository.findByOrganization_Id(organizationId);
+    }
+
+    /**
+     * Counts users by organization.
+     *
+     * @param organizationId The ID of the organization.
+     * @return The count of users belonging to the specified organization.
+     */
+    public long countUsersByOrganization(Long organizationId) {
+        if (organizationId == null) {
+            throw new IllegalArgumentException("Organization ID cannot be null");
+        }
+        return userRepository.countByOrganization_Id(organizationId);
+    }
+
     @Transactional(readOnly = true) // Good for read operations and managing LAZY loading
     public Optional<User> findByUsernameForProfile(String username) { // Or whatever you call it
         Optional<User> userOptional = userRepository.findByUsername(username.trim().toLowerCase());
@@ -172,6 +198,31 @@ public class UserService {
             }
             // You can log here too:
             // System.out.println("Fetching profile for " + user.getUsername() + ". Accessible projects count: " + (user.getAccessibleProjects() != null ? user.getAccessibleProjects().size() : 0));
+        });
+        return userOptional;
+    }
+
+    /**
+     * Finds a user by username with organization data loaded for profile display.
+     *
+     * @param username The username to search for.
+     * @return An Optional containing the User with organization data loaded.
+     */
+    @Transactional(readOnly = true)
+    public Optional<User> findByUsernameWithOrganization(String username) {
+        Optional<User> userOptional = userRepository.findByUsername(username.trim().toLowerCase());
+        userOptional.ifPresent(user -> {
+            // Initialize LAZY collections needed by the profile view
+            if (user.getRoles() != null) {
+                user.getRoles().size(); // Accessing size() is a common way to initialize
+            }
+            if (user.getAccessibleProjects() != null) {
+                user.getAccessibleProjects().size();
+            }
+            // Initialize organization relationship
+            if (user.getOrganization() != null) {
+                user.getOrganization().getName(); // Access to force loading
+            }
         });
         return userOptional;
     }
@@ -220,6 +271,23 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
 
         user.setPassword(passwordEncoder.encode(newPassword.trim()));
+        return userRepository.save(user);
+    }
+
+    /**
+     * Toggles a user's enabled status (admin only method)
+     *
+     * @param userId The ID of the user whose status to toggle
+     * @param enabled The new enabled status
+     * @return The updated User object
+     * @throws IllegalArgumentException if user not found
+     */
+    @Transactional
+    public User toggleUserStatus(Long userId, boolean enabled) throws IllegalArgumentException {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+
+        user.setEnabled(enabled);
         return userRepository.save(user);
     }
 

@@ -1,5 +1,6 @@
 package org.example.controller;
 
+import org.example.dto.UserProfileDto;
 import org.example.models.User;
 import org.example.service.UserService;
 import org.slf4j.Logger;
@@ -35,16 +36,16 @@ public class UserProfileController {
         logger.debug("Fetching profile for user: {}", username);
 
         try {
-            User user = userService.findByUsername(username)
+            User user = userService.findByUsernameWithOrganization(username)
                     .orElseThrow(() -> {
                         logger.warn("User not found during profile fetch: {}", username);
                         return new UsernameNotFoundException("User not found: " + username);
                     });
 
-            return ResponseEntity.ok(user);
+            UserProfileDto profileDto = new UserProfileDto(user);
+            return ResponseEntity.ok(profileDto);
         } catch (UsernameNotFoundException e) {
             return ResponseEntity.notFound().build();
         }
     }
-
 }

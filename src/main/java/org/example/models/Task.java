@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.example.models.enums.TaskStatus;
 import org.example.models.enums.ProjectStage;
+import org.example.models.enums.TaskPriority;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +35,13 @@ public class Task {
     @Column(name = "project_stage", nullable = false)
     private ProjectStage projectStage;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "priority")
+    private TaskPriority priority;
+
+    @Column(name = "due_date")
+    private LocalDate dueDate;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
     @JsonIgnore // Prevent Hibernate proxy serialization issues
@@ -60,6 +69,7 @@ public class Task {
     // Constructors
     public Task() {
         this.status = TaskStatus.TO_DO; // Default status
+        this.priority = TaskPriority.MEDIUM; // Default priority
     }
 
     // Getters and Setters
@@ -101,6 +111,22 @@ public class Task {
 
     public void setProjectStage(ProjectStage projectStage) {
         this.projectStage = projectStage;
+    }
+
+    public TaskPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(TaskPriority priority) {
+        this.priority = priority;
+    }
+
+    public LocalDate getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(LocalDate dueDate) {
+        this.dueDate = dueDate;
     }
 
     public Project getProject() {

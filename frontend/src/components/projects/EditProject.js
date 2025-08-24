@@ -13,7 +13,10 @@ const EditProject = ({ user }) => {
     projectCategory: '',
     status: '',
     projectStage: '',
-    description: ''
+    description: '',
+    budget: '',
+    actualCost: '',
+    priority: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -50,6 +53,13 @@ const EditProject = ({ user }) => {
     { value: 'STAGE_07_USE', label: 'Stage 07: Use' }
   ];
 
+  const projectPriorities = [
+    { value: 'LOW', label: 'Low', cssClass: 'priority-low' },
+    { value: 'MEDIUM', label: 'Medium', cssClass: 'priority-medium' },
+    { value: 'HIGH', label: 'High', cssClass: 'priority-high' },
+    { value: 'URGENT', label: 'Urgent', cssClass: 'priority-urgent' }
+  ];
+
   useEffect(() => {
     // Redirect non-admin users
     if (!isAdmin) {
@@ -78,7 +88,10 @@ const EditProject = ({ user }) => {
             projectCategory: dto.projectCategory || '',
             status: dto.status || '',
             projectStage: dto.projectStage || '',
-            description: dto.description || ''
+            description: dto.description || '',
+            budget: dto.budget || '',
+            actualCost: dto.actualCost || '',
+            priority: dto.priority || ''
           });
         }
       } else {
@@ -119,7 +132,10 @@ const EditProject = ({ user }) => {
           'projectCategory': formData.projectCategory,
           'status': formData.status,
           'projectStage': formData.projectStage,
-          'description': formData.description
+          'description': formData.description,
+          'budget': formData.budget,
+          'actualCost': formData.actualCost,
+          'priority': formData.priority
         }),
         credentials: 'include'
       });
@@ -255,22 +271,73 @@ const EditProject = ({ user }) => {
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="projectStage">Project Stage *:</label>
-            <select
-              id="projectStage"
-              name="projectStage"
-              value={formData.projectStage}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select stage</option>
-              {projectStages.map(stage => (
-                <option key={stage.value} value={stage.value}>
-                  {stage.label}
-                </option>
-              ))}
-            </select>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="projectStage">Project Stage *:</label>
+              <select
+                id="projectStage"
+                name="projectStage"
+                value={formData.projectStage}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select stage</option>
+                {projectStages.map(stage => (
+                  <option key={stage.value} value={stage.value}>
+                    {stage.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="priority">Project Priority:</label>
+              <select
+                id="priority"
+                name="priority"
+                value={formData.priority}
+                onChange={handleChange}
+              >
+                <option value="">Select priority</option>
+                {projectPriorities.map(priority => (
+                  <option key={priority.value} value={priority.value}>
+                    {priority.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="budget">Budget:</label>
+              <input
+                type="number"
+                id="budget"
+                name="budget"
+                value={formData.budget}
+                onChange={handleChange}
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+              />
+              <small className="form-help">Enter budget amount (optional)</small>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="actualCost">Actual Cost:</label>
+              <input
+                type="number"
+                id="actualCost"
+                name="actualCost"
+                value={formData.actualCost}
+                onChange={handleChange}
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+              />
+              <small className="form-help">Enter actual cost (optional)</small>
+            </div>
           </div>
 
           <div className="form-group">

@@ -48,7 +48,7 @@ public class SecurityConfig {
                         .failureUrl("/login?error=true")
                 )
                 .logout(logout -> logout
-                        .logoutUrl("/logout")
+                        .logoutUrl("/api/logout")
                         .logoutSuccessUrl("/login?logout")
                         .permitAll()
                 )

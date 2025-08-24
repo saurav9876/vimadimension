@@ -21,6 +21,8 @@ import org.springframework.security.core.Authentication;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.example.service.ProjectService;
+import org.example.service.TaskService;
 
 @Controller
 @RequestMapping("/api/admin") // Base path for admin API operations
@@ -29,10 +31,14 @@ public class AdminController {
     private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
 
     private final UserService userService;
+    private final ProjectService projectService;
+    private final TaskService taskService;
 
     @Autowired
-    public AdminController(UserService userService) {
+    public AdminController(UserService userService, ProjectService projectService, TaskService taskService) {
         this.userService = userService;
+        this.projectService = projectService;
+        this.taskService = taskService;
     }
 
     // This endpoint allows an existing admin to grant ROLE_ADMIN to another user.
@@ -89,9 +95,22 @@ public class AdminController {
     // Add endpoint for listing users (this was missing and causing the infinite loop)
     @GetMapping("/users")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<?> listUsers() {
+    public ResponseEntity<?> listUsers(Authentication authentication) {
         try {
-            List<User> users = userService.findAllUsers();
+            // Get the current admin user to determine their organization
+            String adminUsername = authentication.getName();
+            User adminUser = userService.findByUsername(adminUsername)
+                    .orElseThrow(() -> new IllegalArgumentException("Admin user not found"));
+            
+            if (adminUser.getOrganization() == null) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Admin user must belong to an organization"
+                ));
+            }
+            
+            // Get users from the same organization only
+            List<User> users = userService.findUsersByOrganization(adminUser.getOrganization().getId());
             List<Map<String, Object>> userList = users.stream()
                 .map(user -> Map.of(
                     "id", user.getId(),
@@ -151,18 +170,70 @@ public class AdminController {
         }
     }
 
+    // Endpoint to toggle user status (activate/deactivate)
+    @PostMapping("/users/{userId}/toggle-status")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<?> toggleUserStatus(@PathVariable Long userId, @RequestBody Map<String, Boolean> request) {
+        try {
+            Boolean enabled = request.get("enabled");
+            if (enabled == null) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Enabled status is required"
+                ));
+            }
+            
+            userService.toggleUserStatus(userId, enabled);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "User status updated successfully"
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        } catch (Exception e) {
+            logger.error("Error toggling status for user {}: {}", userId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "error", "Failed to update user status"
+            ));
+        }
+    }
+
     // Dashboard endpoint as requested
     @GetMapping("/dashboard")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<?> getDashboard() {
+    public ResponseEntity<?> getDashboard(Authentication authentication) {
         try {
+            // Get the current admin user to determine their organization
+            String adminUsername = authentication.getName();
+            User adminUser = userService.findByUsername(adminUsername)
+                    .orElseThrow(() -> new IllegalArgumentException("Admin user not found"));
+            
+            if (adminUser.getOrganization() == null) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Admin user must belong to an organization"
+                ));
+            }
+            
+            // Get real statistics for the organization
+            Long organizationId = adminUser.getOrganization().getId();
+            long totalUsers = userService.countUsersByOrganization(organizationId);
+            long totalProjects = projectService.countProjectsByOrganization(organizationId);
+            long totalTasks = taskService.countTasksByOrganization(organizationId);
+            long activeProjects = projectService.countActiveProjectsByOrganization(organizationId);
+            
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "Admin dashboard data",
+                "message", "Admin dashboard data retrieved successfully",
                 "stats", Map.of(
-                    "totalUsers", 0,
-                    "totalProjects", 0,
-                    "totalTasks", 0
+                    "totalUsers", totalUsers,
+                    "totalProjects", totalProjects,
+                    "totalTasks", totalTasks,
+                    "activeProjects", activeProjects
                 )
             ));
         } catch (Exception e) {

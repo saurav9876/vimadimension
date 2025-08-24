@@ -15,4 +15,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByReporter(User reporter);
     List<Task> findByProjectId(Long projectId); // Useful for direct lookup
     boolean existsByProjectId(Long projectId); // Add this if not present
+    
+    // Organization-based queries - using correct JPA property path
+    long countByProject_Organization_Id(Long organizationId);
 }

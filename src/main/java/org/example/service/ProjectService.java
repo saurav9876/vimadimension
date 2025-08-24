@@ -19,6 +19,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import org.example.models.enums.ProjectStatus;
 
 @Service
 public class ProjectService {
@@ -98,9 +100,34 @@ public class ProjectService {
         // This would require adding a method to ProjectRepository
         // For now, let's filter from all projects (not optimal for large datasets)
         return projectRepository.findAll().stream()
-                .filter(project -> project.getOrganization() != null && 
-                                 project.getOrganization().getId().equals(user.getOrganization().getId()))
-                .toList();
+                .filter(project -> Objects.equals(project.getOrganization(), user.getOrganization()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Counts projects by organization.
+     *
+     * @param organizationId The ID of the organization.
+     * @return The count of projects belonging to the specified organization.
+     */
+    public long countProjectsByOrganization(Long organizationId) {
+        if (organizationId == null) {
+            throw new IllegalArgumentException("Organization ID cannot be null");
+        }
+        return projectRepository.countByOrganization_Id(organizationId);
+    }
+
+    /**
+     * Counts active projects by organization.
+     *
+     * @param organizationId The ID of the organization.
+     * @return The count of active projects belonging to the specified organization.
+     */
+    public long countActiveProjectsByOrganization(Long organizationId) {
+        if (organizationId == null) {
+            throw new IllegalArgumentException("Organization ID cannot be null");
+        }
+        return projectRepository.countByOrganization_IdAndStatusNot(organizationId, ProjectStatus.COMPLETED);
     }
 
     @Transactional // This ensures all database operations are part of a single transaction
@@ -149,6 +176,12 @@ public class ProjectService {
         project.setStatus(projectCreateDto.getStatus());
         project.setProjectStage(projectCreateDto.getProjectStage());
         project.setDescription(projectCreateDto.getDescription() != null ? projectCreateDto.getDescription().trim() : null);
+        
+        // --- SET NEW CRITICAL FIELDS ---
+        project.setBudget(projectCreateDto.getBudget());
+        project.setActualCost(projectCreateDto.getActualCost());
+        project.setPriority(projectCreateDto.getPriority() != null ? projectCreateDto.getPriority() : org.example.models.enums.ProjectPriority.MEDIUM);
+        
         project.setOrganization(creator.getOrganization()); // Set the organization from the user
         
         logger.info("Creating project '{}' for organization: {}", project.getName(), creator.getOrganization().getName());
@@ -267,6 +300,28 @@ public class ProjectService {
             String newDescription = projectUpdateDto.getDescription(); // No trim here if you want to allow leading/trailing spaces intentionally, or trim if not.
             if (!Objects.equals(projectToUpdate.getDescription(), newDescription)) { // Check if actually changed
                 projectToUpdate.setDescription(newDescription);
+                updated = true;
+            }
+        }
+
+        // --- UPDATE NEW CRITICAL FIELDS ---
+        if (projectUpdateDto.getBudget() != null) {
+            if (!Objects.equals(projectToUpdate.getBudget(), projectUpdateDto.getBudget())) {
+                projectToUpdate.setBudget(projectUpdateDto.getBudget());
+                updated = true;
+            }
+        }
+
+        if (projectUpdateDto.getActualCost() != null) {
+            if (!Objects.equals(projectToUpdate.getActualCost(), projectUpdateDto.getActualCost())) {
+                projectToUpdate.setActualCost(projectUpdateDto.getActualCost());
+                updated = true;
+            }
+        }
+
+        if (projectUpdateDto.getPriority() != null) {
+            if (!Objects.equals(projectToUpdate.getPriority(), projectUpdateDto.getPriority())) {
+                projectToUpdate.setPriority(projectUpdateDto.getPriority());
                 updated = true;
             }
         }
