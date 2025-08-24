@@ -71,3 +71,9 @@ test/
 *.backup
 data/
 mysql-data/
+
+# Build artifacts (already covered above, but explicit)
+.gradle/
+build/
+out/
+target/
