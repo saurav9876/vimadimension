@@ -291,6 +291,39 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    /**
+     * Updates a user's profile information
+     *
+     * @param userId The ID of the user whose profile to update
+     * @param name The new full name
+     * @param email The new email address
+     * @return The updated User object
+     * @throws IllegalArgumentException if user not found or email is already taken
+     */
+    @Transactional
+    public User updateUserProfile(Long userId, String name, String email) throws IllegalArgumentException {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Name cannot be empty.");
+        }
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email cannot be empty.");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+
+        String trimmedEmail = email.trim().toLowerCase();
+        
+        // Check if email is already taken by another user (excluding current user)
+        if (!user.getEmail().equalsIgnoreCase(trimmedEmail) && userRepository.existsByEmail(trimmedEmail)) {
+            throw new IllegalArgumentException("Email already exists: " + email);
+        }
+
+        user.setName(name.trim());
+        user.setEmail(trimmedEmail);
+        return userRepository.save(user);
+    }
+
     // Optional: Custom exception for role not found
     public static class RoleNotFoundException extends RuntimeException {
         public RoleNotFoundException(String message) {

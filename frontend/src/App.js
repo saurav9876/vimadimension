@@ -71,26 +71,26 @@ const App = () => {
           <Route 
             path="/login" 
             element={
-              user ? <Navigate to="/projects" replace /> : <Login onLogin={handleLogin} />
+              user ? <Navigate to="/profile" replace /> : <Login onLogin={handleLogin} />
             } 
           />
           
           <Route 
             path="/register" 
             element={
-              user ? <Navigate to="/projects" replace /> : <OrganizationRegister />
+              user ? <Navigate to="/profile" replace /> : <OrganizationRegister />
             } 
           />
           
           <Route 
             path="/" 
-            element={<Navigate to={user ? "/projects" : "/login"} replace />} 
+            element={<Navigate to={user ? "/profile" : "/login"} replace />} 
           />
           
           {/* Protected routes */}
           {user ? (
             <>
-              <Route path="/profile" element={<UserProfile user={user} />} />
+              <Route path="/profile" element={<UserProfile user={user} onUserUpdate={checkAuthStatus} />} />
               <Route path="/projects" element={<ProjectsList user={user} />} />
               <Route path="/projects/new" element={<CreateProject />} />
               <Route path="/projects/:id/details" element={<ProjectDetails user={user} />} />

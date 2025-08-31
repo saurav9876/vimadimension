@@ -34,6 +34,7 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/static/**", "/index.html", "/error").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/organization/register").permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/**").authenticated()
@@ -44,7 +45,7 @@ public class SecurityConfig {
                 .formLogin(form -> form
                         .loginPage("/login")
                         .permitAll()
-                        .defaultSuccessUrl("/projects", true)
+                        .defaultSuccessUrl("/profile", true)
                         .failureUrl("/login?error=true")
                 )
                 .logout(logout -> logout

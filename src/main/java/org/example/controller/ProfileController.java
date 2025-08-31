@@ -87,4 +87,60 @@ public class ProfileController {
             ));
         }
     }
+
+    @PostMapping("/update-profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> updateProfile(@RequestBody Map<String, String> request, Authentication authentication) {
+        try {
+            String name = request.get("name");
+            String email = request.get("email");
+            
+            if (name == null || name.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Name is required"
+                ));
+            }
+            
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Email is required"
+                ));
+            }
+
+            // Get the current user
+            String username = authentication.getName();
+            var userOptional = userService.findByUsername(username);
+            
+            if (userOptional.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "User not found"
+                ));
+            }
+
+            var user = userOptional.get();
+            
+            // Update the profile
+            userService.updateUserProfile(user.getId(), name, email);
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Profile updated successfully"
+            ));
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "error", "Failed to update profile: " + e.getMessage()
+            ));
+        }
+    }
 }
+

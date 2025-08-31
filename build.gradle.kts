@@ -1,6 +1,6 @@
 plugins {
     id("java")
-    id("org.springframework.boot") version "3.4.0" // Updated to support Java 23
+    id("org.springframework.boot") version "3.4.0"
     id("io.spring.dependency-management") version "1.1.4"
 }
 
@@ -8,10 +8,10 @@ group = "org.example"
 version = "1.0-SNAPSHOT"
 
 
-// Add this block to specify the Java version for your project
+// Use Java 21 LTS for Windows Server 2016 compatibility
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(23)) // Updated to Java 23
+        languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
 
@@ -29,6 +29,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security") // <-- ADD THIS LINE
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
     // You'll also need a JDBC driver for your chosen database.
     // For example, if you're using PostgreSQL:
     // runtimeOnly("org.postgresql:postgresql")
