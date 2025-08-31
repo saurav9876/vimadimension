@@ -235,6 +235,9 @@ foreach ($k in $badEnv) {
     Remove-Item "Env:$k" -ErrorAction SilentlyContinue
   }
 }
+# Use a short Gradle cache path to avoid Windows MAX_PATH issues
+if (-not (Test-Path "C:\\gradle-cache")) { New-Item -ItemType Directory -Path "C:\\gradle-cache" | Out-Null }
+$env:GRADLE_USER_HOME = "C:\\gradle-cache"
 Build-Backend
 Install-Service
 Build-Frontend
