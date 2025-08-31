@@ -127,11 +127,11 @@ function Install-Service {
   & $nssm set $ServiceName Description "VimaDimension Spring Boot Backend"
   $envs = @(
     "SPRING_PROFILES_ACTIVE=prod",
-    "SPRING_DATASOURCE_URL=jdbc:mysql://$DbHost:$DbPort/$DbName?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC",
-    "SPRING_DATASOURCE_USERNAME=$DbUser",
-    "SPRING_DATASOURCE_PASSWORD=$DbPassword",
+    "SPRING_DATASOURCE_URL=jdbc:mysql://${DbHost}:${DbPort}/${DbName}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC",
+    "SPRING_DATASOURCE_USERNAME=${DbUser}",
+    "SPRING_DATASOURCE_PASSWORD=${DbPassword}",
     "SPRING_JPA_HIBERNATE_DDL_AUTO=update",
-    "SERVER_PORT=$AppPort",
+    "SERVER_PORT=${AppPort}",
     "JAVA_TOOL_OPTIONS=-Xms256m -Xmx512m -Dfile.encoding=UTF-8"
   )
   foreach ($e in $envs) { & $nssm set $ServiceName AppEnvironmentExtra $e }
@@ -225,7 +225,10 @@ Write-Host "Building application..." -ForegroundColor Cyan
 # Neutralize problematic JVM args from environment for this session
 $badEnv = @('JAVA_TOOL_OPTIONS','_JAVA_OPTIONS','GRADLE_OPTS')
 foreach ($k in $badEnv) {
-  if ($env:$k) { Write-Host "Clearing $k for this session to avoid daemon issues" -ForegroundColor Yellow; Remove-Item Env:\$k -ErrorAction SilentlyContinue }
+  if (Test-Path "Env:$k") {
+    Write-Host "Clearing $k for this session to avoid daemon issues" -ForegroundColor Yellow
+    Remove-Item "Env:$k" -ErrorAction SilentlyContinue
+  }
 }
 Build-Backend
 Install-Service
