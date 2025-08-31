@@ -108,8 +108,13 @@ function Build-Backend {
   Write-Host "Building backend via Gradle..."
   Push-Location $root
   if (-not (Test-Path .\gradlew.bat)) { Write-Error "gradlew.bat not found; run from repo root."; exit 1 }
-  & .\gradlew.bat clean bootJar --no-daemon
-  if ($LASTEXITCODE -ne 0) { Write-Error "Gradle build failed"; exit 1 }
+  # Attempt 1: avoid daemon and extra JVM args
+  & .\gradlew.bat --no-daemon -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs="" clean bootJar
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Gradle build failed (attempt 1). Retrying with explicit JVM args..."
+    & .\gradlew.bat --no-daemon -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs="-Xms256m -Xmx512m -Dfile.encoding=UTF-8" clean bootJar
+  }
+  if ($LASTEXITCODE -ne 0) { Write-Error "Gradle build failed after two attempts."; exit 1 }
   Pop-Location
 }
 
