@@ -23,6 +23,8 @@ param(
   [string]$DbPassword = "your_secure_production_password",
   [int]$AppPort = 8080,
   [string]$ServiceName = "VimaDimension",
+  [switch]$SkipBackendBuild,
+  [string]$JarPath,
   [switch]$SkipJdkInstall,
   [switch]$SkipNodeInstall,
   [switch]$SkipIisConfig,
@@ -120,9 +122,14 @@ function Build-Backend {
 
 function Install-Service {
   $root = Resolve-Path "$PSScriptRoot\.."
-  $jars = Get-ChildItem -Path "$root\build\libs" -Filter *.jar | Sort-Object LastWriteTime -Descending
-  if (-not $jars) { Write-Error "No JAR found in build\libs"; exit 1 }
-  $jarPath = $jars[0].FullName
+  if ($JarPath) {
+    if (-not (Test-Path $JarPath)) { Write-Error "Specified JarPath not found: $JarPath"; exit 1 }
+    $jarPath = (Resolve-Path $JarPath).Path
+  } else {
+    $jars = Get-ChildItem -Path "$root\build\libs" -Filter *.jar -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
+    if (-not $jars) { Write-Error "No JAR found in build\\libs. Provide -JarPath to use a prebuilt JAR."; exit 1 }
+    $jarPath = $jars[0].FullName
+  }
   $nssm = "$PSScriptRoot\nssm.exe"
   if (-not (Test-Path $nssm)) { Write-Error "nssm.exe not found"; exit 1 }
   Write-Host "Installing service $ServiceName ..."
@@ -238,7 +245,11 @@ foreach ($k in $badEnv) {
 # Use a short Gradle cache path to avoid Windows MAX_PATH issues
 if (-not (Test-Path "C:\\gradle-cache")) { New-Item -ItemType Directory -Path "C:\\gradle-cache" | Out-Null }
 $env:GRADLE_USER_HOME = "C:\\gradle-cache"
-Build-Backend
+if (-not $SkipBackendBuild) {
+  Build-Backend
+} else {
+  Write-Host "Skipping backend build as requested (-SkipBackendBuild)." -ForegroundColor Yellow
+}
 Install-Service
 Build-Frontend
 Configure-IIS
