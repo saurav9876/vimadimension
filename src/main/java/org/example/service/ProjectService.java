@@ -343,11 +343,25 @@ public class ProjectService {
             return false; // Or throw ProjectNotFoundException
         }
 
+        Project project = projectOptional.get();
+
         // Check if there are any tasks associated with this project
         if (taskRepository.existsByProjectId(projectId)) {
             logger.warn("Attempt to delete project ID {} which has associated tasks. Deletion prevented.", projectId);
             throw new IllegalStateException("Cannot delete project with ID " + projectId + " as it has associated tasks. Please delete or reassign tasks first.");
         }
+
+        // Remove the project from all users' accessible projects to avoid foreign key constraint violation
+        // Get all users who have access to this project and remove the association
+        for (User user : project.getAccessibleByUsers()) {
+            user.getAccessibleProjects().remove(project);
+        }
+        
+        // Clear the associations from the project side as well
+        project.getAccessibleByUsers().clear();
+        
+        // Save the project to persist the cleared associations before deletion
+        projectRepository.save(project);
 
         projectRepository.deleteById(projectId);
         logger.info("Project with ID: {} deleted successfully.", projectId);

@@ -29,8 +29,6 @@ const UserProfile = ({ user, onUserUpdate }) => {
     hasClockedOutToday: false
   });
   const [attendanceMessage, setAttendanceMessage] = useState('');
-  const [todayAttendance, setTodayAttendance] = useState([]);
-  const [loadingAttendance, setLoadingAttendance] = useState(false);
   
   // Update profile data when user prop changes
   React.useEffect(() => {
@@ -47,7 +45,6 @@ const UserProfile = ({ user, onUserUpdate }) => {
   useEffect(() => {
     if (user) {
       fetchAttendanceStatus();
-      fetchTodayAttendance();
     }
   }, [user]);
 
@@ -86,23 +83,6 @@ const UserProfile = ({ user, onUserUpdate }) => {
     }
   };
 
-  const fetchTodayAttendance = async () => {
-    setLoadingAttendance(true);
-    try {
-      const response = await fetch('/api/attendance/today', {
-        credentials: 'include'
-      });
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        setTodayAttendance(data.entries);
-      }
-    } catch (error) {
-      console.error('Error fetching today attendance:', error);
-    } finally {
-      setLoadingAttendance(false);
-    }
-  };
 
   const handleClockIn = async () => {
     // Prevent clock in if already clocked in today
@@ -128,7 +108,6 @@ const UserProfile = ({ user, onUserUpdate }) => {
       if (response.ok && data.success) {
         setAttendanceMessage({ type: 'success', text: data.message });
         fetchAttendanceStatus();
-        fetchTodayAttendance();
       } else {
         setAttendanceMessage({ type: 'error', text: data.message || 'Failed to clock in' });
       }
@@ -169,7 +148,6 @@ const UserProfile = ({ user, onUserUpdate }) => {
       if (response.ok && data.success) {
         setAttendanceMessage({ type: 'success', text: data.message });
         fetchAttendanceStatus();
-        fetchTodayAttendance();
       } else {
         setAttendanceMessage({ type: 'error', text: data.message || 'Failed to clock out' });
       }
@@ -330,249 +308,207 @@ const UserProfile = ({ user, onUserUpdate }) => {
     setProfileMessage('');
   };
 
-  return (
-    <div className="main-content">
-      <div className="page-header">
-        <h1 className="page-title">My Profile</h1>
-        <div className="page-actions">
-          {!isEditingProfile && (
+    return (
+      <div className="profile-container">
+        {/* Profile Header Section */}
+        <div className="profile-header">
+          <div className="profile-avatar-section">
+            <div className="profile-avatar">
+              {user?.name?.charAt(0)?.toUpperCase() || user?.username?.charAt(0)?.toUpperCase() || 'U'}
+            </div>
+            <div className="profile-basic-info">
+              <h1 className="profile-name">{user?.name || user?.username || 'User'}</h1>
+              
+              {/* Professional Information in Header */}
+              <div className="profile-professional-info">
+                <div className="professional-item">
+                  <span className="prof-label">Designation:</span>
+                  <span className="prof-value">{user?.designation || 'Not set'}</span>
+                </div>
+                <div className="professional-item">
+                  <span className="prof-label">Specialization:</span>
+                  <span className="prof-value">{user?.specialization || 'Not set'}</span>
+                </div>
+                {user?.licenseNumber && (
+                  <div className="professional-item">
+                    <span className="prof-label">License:</span>
+                    <span className="prof-value">{user.licenseNumber}</span>
+                  </div>
+                )}
+                {user?.portfolioLink && (
+                  <div className="professional-item">
+                    <span className="prof-label">Portfolio:</span>
+                    <a href={user.portfolioLink} target="_blank" rel="noopener noreferrer" className="prof-link">
+                      View Portfolio
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="profile-actions">
             <button 
+              className="btn-secondary"
               onClick={() => setIsEditingProfile(true)}
-              className="btn-primary"
             >
               Edit Profile
             </button>
-          )}
-        </div>
-      </div>
-
-      <div className="profile-layout">
-        {/* Profile Summary Card */}
-        <div className="profile-summary">
-          <div className="profile-avatar">
-            {user?.name?.charAt(0)?.toUpperCase() || user?.username?.charAt(0)?.toUpperCase() || 'U'}
-          </div>
-          <div className="profile-summary-info">
-            <h2>{user?.name || user?.username || 'User'}</h2>
-            <p className="profile-role">
-              {user?.authorities?.map(auth => auth.authority?.replace('ROLE_', '')).join(', ') || 'User'}
-            </p>
-            <p className="profile-org">{user?.organizationName || 'No organization'}</p>
-            <span className={`status-badge ${user?.enabled ? 'active' : 'inactive'}`}>
-              {user?.enabled ? '✅ Active' : '❌ Inactive'}
-            </span>
+            <button 
+              className="btn-outline"
+              onClick={() => setShowPasswordForm(true)}
+            >
+              Change Password
+            </button>
           </div>
         </div>
 
-        <div className="profile-details">
-
-          {/* Personal Information */}
-          <div className="detail-section">
-            <div className="section-header">
+        {/* Profile Content Grid */}
+        <div className="profile-content-grid">
+          {/* Personal Information Card */}
+          <div className="profile-card personal-info-card">
+            <div className="card-header">
               <h3>Personal Information</h3>
-              <button 
-                className="change-password-btn"
-                onClick={() => setShowPasswordForm(true)}
-              >
-                Change Password
-              </button>
             </div>
-            
-            {!isEditingProfile ? (
-              <div className="info-grid">
-                <div className="info-row">
-                  <span className="label">Username:</span>
-                  <span className="value">{user?.username || 'Not available'}</span>
-                </div>
-                <div className="info-row">
-                  <span className="label">Full Name:</span>
-                  <span className="value">{user?.name || 'Not set'}</span>
-                </div>
-                <div className="info-row">
-                  <span className="label">Email:</span>
-                  <span className="value">{user?.email || 'Not set'}</span>
-                </div>
-                {user?.bio && (
-                  <div className="info-row bio-row">
-                    <span className="label">Bio:</span>
-                    <p className="bio-text">{user.bio}</p>
+            <div className="card-content">
+              {!isEditingProfile ? (
+                <div className="info-section">
+                  <div className="info-item">
+                    <label>Username</label>
+                    <span className="info-value">{user?.username || 'Not available'}</span>
                   </div>
-                )}
-              </div>
-            ) : (
-              <form onSubmit={handleProfileUpdate} className="edit-form">
-                <div className="form-group">
-                  <label htmlFor="profileName">Full Name</label>
-                  <input
-                    type="text"
-                    id="profileName"
-                    name="name"
-                    value={profileData.name}
-                    onChange={handleProfileInputChange}
-                    required
-                    placeholder="Enter your full name"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="profileEmail">Email Address</label>
-                  <input
-                    type="email"
-                    id="profileEmail"
-                    name="email"
-                    value={profileData.email}
-                    onChange={handleProfileInputChange}
-                    required
-                    placeholder="Enter your email address"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="profileBio">Bio</label>
-                  <textarea
-                    id="profileBio"
-                    name="bio"
-                    value={profileData.bio}
-                    onChange={handleProfileInputChange}
-                    rows="4"
-                    placeholder="Enter your bio (optional)"
-                  />
-                </div>
-                
-                {profileMessage && (
-                  <div className={`alert ${profileMessage.type === 'error' ? 'alert-danger' : 'alert-success'}`}>
-                    {profileMessage.text}
+                  <div className="info-item">
+                    <label>Full Name</label>
+                    <span className="info-value">{user?.name || 'Not set'}</span>
                   </div>
-                )}
-                
-                <div className="form-actions">
-                  <button 
-                    type="submit" 
-                    className="btn-primary"
-                    disabled={isUpdatingProfile}
-                  >
-                    {isUpdatingProfile ? 'Saving...' : 'Save Changes'}
-                  </button>
-                  <button 
-                    type="button" 
-                    className="btn-outline"
-                    onClick={cancelProfileEdit}
-                    disabled={isUpdatingProfile}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-
-          {/* Professional Information */}
-          <div className="detail-section">
-            <h3>Professional Information</h3>
-            <div className="info-grid">
-              <div className="info-row">
-                <span className="label">Designation:</span>
-                <span className="value">{user?.designation || 'Not set'}</span>
-              </div>
-              <div className="info-row">
-                <span className="label">Specialization:</span>
-                <span className="value">{user?.specialization || 'Not set'}</span>
-              </div>
-              {user?.licenseNumber && (
-                <div className="info-row">
-                  <span className="label">License:</span>
-                  <span className="value">{user.licenseNumber}</span>
-                </div>
-              )}
-              {user?.portfolioLink && (
-                <div className="info-row">
-                  <span className="label">Portfolio:</span>
-                  <a href={user.portfolioLink} target="_blank" rel="noopener noreferrer" className="value-link">
-                    View Portfolio
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Attendance Tracking Section */}
-          <div className="detail-section">
-            <h3>Attendance Tracking</h3>
-            
-            {/* Current Status */}
-            <div className="attendance-status">
-              <div className="status-info">
-                <div className="status-indicator">
-                  <span className={`status-dot ${attendanceStatus.isClockedIn ? 'active' : 'inactive'}`}></span>
-                  <span className="status-text">
-                    {attendanceStatus.isClockedIn ? 'Currently Clocked In' : 'Currently Clocked Out'}
-                  </span>
-                </div>
-                {attendanceStatus.lastEntry && (
-                  <div className="last-entry">
-                    <small>
-                      Last {attendanceStatus.lastEntry.entryType === 'CLOCK_IN' ? 'clock in' : 'clock out'}: {' '}
-                      {formatTime(attendanceStatus.lastEntry.timestamp)} on {formatDate(attendanceStatus.lastEntry.timestamp)}
-                    </small>
+                  <div className="info-item">
+                    <label>Email</label>
+                    <span className="info-value">{user?.email || 'Not set'}</span>
                   </div>
-                )}
-              </div>
-              
-              <div className="attendance-actions">
-                <button
-                  onClick={handleClockIn}
-                  disabled={attendanceStatus.loading || attendanceStatus.hasClockedInToday || attendanceStatus.hasClockedOutToday}
-                  className={`btn-attendance ${attendanceStatus.hasClockedInToday || attendanceStatus.hasClockedOutToday ? 'disabled' : 'clock-in'}`}
-                >
-                  {attendanceStatus.loading ? '⏳ Processing...' : 
-                   attendanceStatus.hasClockedInToday ? '✅ Already Clocked In' :
-                   attendanceStatus.hasClockedOutToday ? '❌ Already Clocked Out' : '🟢 Clock In'}
-                </button>
-                <button
-                  onClick={handleClockOut}
-                  disabled={attendanceStatus.loading || !attendanceStatus.hasClockedInToday || attendanceStatus.hasClockedOutToday}
-                  className={`btn-attendance ${!attendanceStatus.hasClockedInToday || attendanceStatus.hasClockedOutToday ? 'disabled' : 'clock-out'}`}
-                >
-                  {attendanceStatus.loading ? '⏳ Processing...' : 
-                   !attendanceStatus.hasClockedInToday ? '❌ Clock In First' :
-                   attendanceStatus.hasClockedOutToday ? '✅ Already Clocked Out' : '🔴 Clock Out'}
-                </button>
-              </div>
-            </div>
-
-            {/* Attendance Message */}
-            {attendanceMessage && (
-              <div className={`alert ${attendanceMessage.type === 'error' ? 'alert-danger' : 'alert-success'}`}>
-                {attendanceMessage.text}
-              </div>
-            )}
-
-            {/* Today's Attendance */}
-            <div className="today-attendance">
-              <h4>Today's Attendance</h4>
-              {loadingAttendance ? (
-                <div className="loading-message">Loading today's attendance...</div>
-              ) : todayAttendance.length > 0 ? (
-                <div className="attendance-log">
-                  {todayAttendance.map((entry, index) => (
-                    <div key={entry.id || index} className="attendance-entry">
-                      <span className={`entry-type ${entry.entryType.toLowerCase().replace('_', '-')}`}>
-                        {entry.entryType === 'CLOCK_IN' ? '🟢 Clock In' : '🔴 Clock Out'}
-                      </span>
-                      <span className="entry-time">{formatTime(entry.timestamp)}</span>
-                      {entry.notes && (
-                        <span className="entry-notes">📝 {entry.notes}</span>
-                      )}
+                  {user?.bio && (
+                    <div className="info-item bio-item">
+                      <label>Bio</label>
+                      <p className="bio-text">{user.bio}</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               ) : (
-                <div className="no-attendance">
-                  <span>No attendance records for today</span>
+                <form onSubmit={handleProfileUpdate} className="profile-edit-form">
+                  <div className="form-group">
+                    <label htmlFor="profileName">Full Name</label>
+                    <input
+                      type="text"
+                      id="profileName"
+                      name="name"
+                      value={profileData.name}
+                      onChange={handleProfileInputChange}
+                      required
+                      placeholder="Enter your full name"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="profileEmail">Email Address</label>
+                    <input
+                      type="email"
+                      id="profileEmail"
+                      name="email"
+                      value={profileData.email}
+                      onChange={handleProfileInputChange}
+                      required
+                      placeholder="Enter your email address"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="profileBio">Bio</label>
+                    <textarea
+                      id="profileBio"
+                      name="bio"
+                      value={profileData.bio}
+                      onChange={handleProfileInputChange}
+                      rows="4"
+                      placeholder="Enter your bio (optional)"
+                    />
+                  </div>
+                  
+                  {profileMessage && (
+                    <div className={`message ${profileMessage.type === 'error' ? 'error' : 'success'}`}>
+                      {profileMessage.text}
+                    </div>
+                  )}
+                  
+                  <div className="form-actions">
+                    <button 
+                      type="submit" 
+                      className="btn-primary"
+                      disabled={isUpdatingProfile}
+                    >
+                      {isUpdatingProfile ? 'Saving...' : 'Save Changes'}
+                    </button>
+                    <button 
+                      type="button" 
+                      className="btn-outline"
+                      onClick={cancelProfileEdit}
+                      disabled={isUpdatingProfile}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+
+          {/* Attendance Tracking Card */}
+          <div className="profile-card">
+            <div className="card-header">
+              <h3>Attendance Tracking</h3>
+            </div>
+            <div className="card-content">
+              <div className="attendance-status">
+                <div className="status-indicator">
+                  <div className={`status-dot ${attendanceStatus.isClockedIn ? 'active' : 'inactive'}`}></div>
+                  <div className="status-info">
+                    <span className="status-text">
+                      {attendanceStatus.isClockedIn ? 'Currently Clocked In' : 'Currently Clocked Out'}
+                    </span>
+                    {attendanceStatus.lastEntry && (
+                      <span className="last-entry-time">
+                        Last {attendanceStatus.lastEntry.entryType === 'CLOCK_IN' ? 'clock in' : 'clock out'}: {' '}
+                        {formatTime(attendanceStatus.lastEntry.timestamp)} on {formatDate(attendanceStatus.lastEntry.timestamp)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="attendance-actions">
+                  <button
+                    onClick={handleClockIn}
+                    disabled={attendanceStatus.loading || attendanceStatus.hasClockedInToday || attendanceStatus.hasClockedOutToday}
+                    className={`btn-attendance clock-in ${attendanceStatus.hasClockedInToday || attendanceStatus.hasClockedOutToday ? 'disabled' : ''}`}
+                  >
+                    {attendanceStatus.loading ? 'Processing...' : 
+                     attendanceStatus.hasClockedInToday ? 'Already Clocked In' :
+                     attendanceStatus.hasClockedOutToday ? 'Already Clocked Out' : 'Clock In'}
+                  </button>
+                  <button
+                    onClick={handleClockOut}
+                    disabled={attendanceStatus.loading || !attendanceStatus.hasClockedInToday || attendanceStatus.hasClockedOutToday}
+                    className={`btn-attendance clock-out ${!attendanceStatus.hasClockedInToday || attendanceStatus.hasClockedOutToday ? 'disabled' : ''}`}
+                  >
+                    {attendanceStatus.loading ? 'Processing...' : 
+                     !attendanceStatus.hasClockedInToday ? 'Clock In First' :
+                     attendanceStatus.hasClockedOutToday ? 'Already Clocked Out' : 'Clock Out'}
+                  </button>
+                </div>
+              </div>
+
+              {attendanceMessage && (
+                <div className={`message ${attendanceMessage.type === 'error' ? 'error' : 'success'}`}>
+                  {attendanceMessage.text}
                 </div>
               )}
             </div>
           </div>
         </div>
-      </div>
 
       {/* Password Change Form - Now shown as modal/overlay */}
       {showPasswordForm && (

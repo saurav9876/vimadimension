@@ -33,32 +33,12 @@ const ProjectsList = ({ user }) => {
     }
   };
 
-  const handleDeleteProject = async (projectId) => {
-    if (window.confirm('Are you sure you want to delete this project?')) {
-      try {
-        const response = await fetch(`/api/projects/${projectId}/delete`, {
-          method: 'POST',
-          credentials: 'include'
-        });
-
-        if (response.ok) {
-          setProjects(projects.filter(p => p.id !== projectId));
-        } else {
-          setError('Failed to delete project');
-        }
-      } catch (error) {
-        console.error('Error deleting project:', error);
-        setError('Failed to delete project');
-      }
-    }
-  };
 
   if (loading) return <div className="main-content">Loading...</div>;
 
   return (
     <div className="main-content">
       <div className="page-header">
-        <h1 className="page-title">Projects</h1>
         <div className="page-actions">
           <Link to="/projects/new" className="btn-primary">
             New Project
@@ -83,10 +63,10 @@ const ProjectsList = ({ user }) => {
               <div className="project-header">
                 <h3>{project.name}</h3>
                 <div className="project-badges">
-                  <span className={`project-status status-${project.status?.toLowerCase().replace(' ', '-')}`}>
+                  <span className={`project-status status-${project.status?.toLowerCase().replace(/[ _]/g, '-')}`}>
                     {project.status?.replace('_', ' ')}
                   </span>
-                  <span className={`priority-badge ${project.priority?.toLowerCase().replace(' ', '-')}-priority`}>
+                  <span className={`priority-badge ${project.priority?.toLowerCase().replace(/[ _]/g, '-')}-priority`}>
                     {project.priority?.replace('_', ' ')}
                   </span>
                 </div>
@@ -158,23 +138,6 @@ const ProjectsList = ({ user }) => {
                 >
                   View Details
                 </Link>
-                {/* Only show Edit and Delete buttons for admin users */}
-                {isAdmin && (
-                  <>
-                    <Link 
-                      to={`/projects/${project.id}/edit`} 
-                      className="btn-small btn-outline"
-                    >
-                      Edit
-                    </Link>
-                    <button 
-                      onClick={() => handleDeleteProject(project.id)}
-                      className="btn-small btn-danger"
-                    >
-                      Delete
-                    </button>
-                  </>
-                )}
               </div>
             </div>
           ))}

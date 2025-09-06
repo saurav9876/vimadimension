@@ -227,6 +227,12 @@ public class ProjectController {
         } catch (IllegalArgumentException e) {
             logger.error("Error deleting project ID {}: {}", projectId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", "Error deleting project: " + e.getMessage()));
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            logger.error("Database constraint violation while deleting project ID {}: {}", projectId, e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("error", "Cannot delete project due to existing dependencies. Please ensure all related data is removed first."));
+        } catch (Exception e) {
+            logger.error("Unexpected error while deleting project ID {}: {}", projectId, e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("error", "An unexpected error occurred while deleting the project."));
         }
     }
 

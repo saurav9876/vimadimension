@@ -87,87 +87,86 @@ const Navbar = ({ user, onLogout }) => {
     if (user?.organizationName) {
       return user.organizationName;
     }
-    // Fallback to username if no organization name
     return user?.username || 'User';
   };
 
   return (
-    <nav className="navbar">
-      <div className="navbar-container">
+    <nav className="navbar-ultra-modern">
+      <div className="navbar-container-ultra">
         {/* Brand Section */}
-        <div className="navbar-brand-section">
-          <a href="https://www.vimathedimension.com/" className="navbar-brand" target="_blank" rel="noopener noreferrer">
-            <img src="/images/firm-logo.jpg" alt="Organization Logo" className="navbar-logo" />
-            <div className="brand-info">
-              <span className="organization-name">{getOrganizationName()}</span>
-              <span className="welcome-text">Project Management</span>
+        <div className="navbar-brand-ultra">
+          <Link to="/" className="brand-link-ultra">
+            <img src="/images/firm-logo.jpg" alt="Logo" className="brand-logo-ultra" />
+            <div className="brand-text-ultra">
+              <span className="brand-name-ultra">{getOrganizationName()}</span>
             </div>
-          </a>
+          </Link>
         </div>
         
         {/* Mobile Menu Toggle */}
-        <button className="mobile-menu-toggle" onClick={toggleMobileMenu} aria-label="Toggle mobile menu">
-          {isMobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
+        <button 
+          className="mobile-toggle-ultra" 
+          onClick={toggleMobileMenu} 
+          aria-label="Toggle menu"
+        >
+          <div className={`hamburger-ultra ${isMobileMenuOpen ? 'active' : ''}`}>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
         </button>
         
-        {/* Navigation Links */}
-        <div className={`navbar-nav-wrapper ${isMobileMenuOpen ? 'open' : ''}`}>
-          <ul className="navbar-nav">
-            <li>
-              <Link 
-                to="/profile" 
-                className={`nav-link ${isActiveLink('/profile') ? 'active' : ''}`}
-                onClick={closeMobileMenu}
-              >
-                <UserIcon />
-                <span>My Profile</span>
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/my-tasks" 
-                className={`nav-link ${isActiveLink('/my-tasks') ? 'active' : ''}`}
-                onClick={closeMobileMenu}
-              >
-                <TasksIcon />
-                <span>My Tasks</span>
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/projects" 
-                className={`nav-link ${isActiveLink('/projects') ? 'active' : ''}`}
-                onClick={closeMobileMenu}
-              >
-                <ProjectsIcon />
-                <span>Projects</span>
-              </Link>
-            </li>
+        {/* Navigation */}
+        <div className={`navbar-nav-ultra ${isMobileMenuOpen ? 'open' : ''}`}>
+          <div className="nav-links-ultra">
+            <Link 
+              to="/profile" 
+              className={`nav-item-ultra ${isActiveLink('/profile') ? 'active' : ''}`}
+              onClick={closeMobileMenu}
+            >
+              <UserIcon />
+              <span>Profile</span>
+            </Link>
+            <Link 
+              to="/my-tasks" 
+              className={`nav-item-ultra ${isActiveLink('/my-tasks') ? 'active' : ''}`}
+              onClick={closeMobileMenu}
+            >
+              <TasksIcon />
+              <span>Tasks</span>
+            </Link>
+            <Link 
+              to="/projects" 
+              className={`nav-item-ultra ${isActiveLink('/projects') ? 'active' : ''}`}
+              onClick={closeMobileMenu}
+            >
+              <ProjectsIcon />
+              <span>Projects</span>
+            </Link>
             {isAdmin() && (
-              <li>
-                <Link 
-                  to="/admin/dashboard" 
-                  className={`nav-link ${isActiveLink('/admin/dashboard') ? 'active' : ''}`}
-                  onClick={closeMobileMenu}
-                >
-                  <AdminIcon />
-                  <span>Admin Dashboard</span>
-                </Link>
-              </li>
+              <Link 
+                to="/admin/dashboard" 
+                className={`nav-item-ultra ${isActiveLink('/admin/dashboard') ? 'active' : ''}`}
+                onClick={closeMobileMenu}
+              >
+                <AdminIcon />
+                <span>Admin</span>
+              </Link>
             )}
-          </ul>
+          </div>
           
-          {/* Logout Button */}
-          <div className="navbar-logout">
-            <button onClick={handleLogout} className="logout-button">
+          <div className="nav-actions-ultra">
+            <button onClick={handleLogout} className="logout-btn-ultra">
               <LogoutIcon />
               <span>Logout</span>
             </button>
           </div>
         </div>
         
-        {/* Mobile Menu Overlay */}
-        {isMobileMenuOpen && <div className="mobile-menu-overlay" onClick={closeMobileMenu}></div>}
+        {/* Mobile Overlay */}
+        {isMobileMenuOpen && (
+          <div className="mobile-overlay-ultra" onClick={closeMobileMenu}></div>
+        )}
       </div>
     </nav>
   );

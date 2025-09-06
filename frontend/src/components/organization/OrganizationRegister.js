@@ -16,7 +16,9 @@ const OrganizationRegister = () => {
         adminUsername: '',
         adminEmail: '',
         adminPassword: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        adminDesignation: '',
+        adminSpecialization: ''
     });
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
@@ -107,7 +109,9 @@ const OrganizationRegister = () => {
                 adminName: formData.adminName,
                 adminUsername: formData.adminUsername,
                 adminEmail: formData.adminEmail,
-                adminPassword: formData.adminPassword
+                adminPassword: formData.adminPassword,
+                adminDesignation: formData.adminDesignation,
+                adminSpecialization: formData.adminSpecialization
             });
 
             if (response.data.success) {
@@ -369,6 +373,37 @@ const OrganizationRegister = () => {
                                                 onChange={handleInputChange}
                                                 placeholder="admin@example.com"
                                                 required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label htmlFor="adminDesignation" className="form-label">
+                                                Designation
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                id="adminDesignation"
+                                                name="adminDesignation"
+                                                value={formData.adminDesignation}
+                                                onChange={handleInputChange}
+                                                placeholder="e.g., Principal Architect, Project Manager"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label htmlFor="adminSpecialization" className="form-label">
+                                                Specialization
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                id="adminSpecialization"
+                                                name="adminSpecialization"
+                                                value={formData.adminSpecialization}
+                                                onChange={handleInputChange}
+                                                placeholder="e.g., Sustainable Design, Urban Planning"
                                             />
                                         </div>
                                     </div>

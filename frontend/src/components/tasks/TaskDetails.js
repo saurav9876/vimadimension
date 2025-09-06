@@ -7,6 +7,8 @@ const TaskDetails = ({ user }) => {
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isMarkingChecked, setIsMarkingChecked] = useState(false);
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     fetchTaskDetails();
@@ -38,6 +40,8 @@ const TaskDetails = ({ user }) => {
     switch (status.toString().toLowerCase()) {
       case 'done':
         return 'status-done';
+      case 'checked':
+        return 'status-checked';
       case 'in_progress':
         return 'status-in-progress';
       case 'in_review':
@@ -56,6 +60,8 @@ const TaskDetails = ({ user }) => {
     switch (priority.toString().toLowerCase()) {
       case 'high':
         return 'priority-high';
+      case 'urgent':
+        return 'priority-urgent';
       case 'low':
         return 'priority-low';
       case 'medium':
@@ -65,11 +71,84 @@ const TaskDetails = ({ user }) => {
   };
 
   const goBack = () => {
-    if (task?.project?.id) {
-      navigate(`/projects/${task.project.id}/details`);
-    } else {
-      navigate('/projects');
+    navigate(-1); // Go back to the previous page in browser history
+  };
+
+  const handleDeleteTask = async () => {
+    if (window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+      try {
+        const response = await fetch(`/api/tasks/${id}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          // Navigate back to the previous page
+          navigate(-1);
+        } else {
+          // Try to get the error message from the response
+          const errorData = await response.json().catch(() => null);
+          const errorMessage = errorData?.error || errorData?.message || 'Failed to delete task';
+          setError(errorMessage);
+        }
+      } catch (error) {
+        console.error('Error deleting task:', error);
+        setError('Failed to delete task');
+      }
     }
+  };
+
+  const canEditTask = () => {
+    if (!user || !task) return false;
+    
+    // User can edit if they are:
+    // 1. Assigned to the task
+    // 2. Creator of the task  
+    // 3. Assigned as checker of the task
+    // 4. Admin user
+    return (
+      (task.assignee && task.assignee.id === user.id) ||
+      (task.reporter && task.reporter.id === user.id) ||
+      (task.checkedBy && task.checkedBy.id === user.id) ||
+      (user.authorities && user.authorities.some(auth => auth.authority === 'ROLE_ADMIN'))
+    );
+  };
+
+  const handleMarkAsChecked = async () => {
+    setIsMarkingChecked(true);
+    setMessage('');
+
+    try {
+      const response = await fetch(`/api/tasks/${id}/mark-checked`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setMessage({ type: 'success', text: data.message });
+        // Refresh task details to show updated status
+        await fetchTaskDetails();
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to mark task as checked' });
+      }
+    } catch (error) {
+      console.error('Error marking task as checked:', error);
+      setMessage({ type: 'error', text: 'Failed to mark task as checked' });
+    } finally {
+      setIsMarkingChecked(false);
+    }
+  };
+
+  // Check if current user is the assigned checker for this task
+  const canMarkAsChecked = () => {
+    return task?.checkedBy && 
+           user?.id === task.checkedBy.id && 
+           task.status === 'DONE';
   };
 
   if (loading) return <div className="main-content">Loading...</div>;
@@ -87,13 +166,40 @@ const TaskDetails = ({ user }) => {
           <button onClick={goBack} className="btn-outline">
             ← Back
           </button>
-          {isAdmin && (
-            <Link to={`/tasks/${id}/edit`} className="btn-outline">
-              Edit Task
-            </Link>
+          {/* Show button if user is assigned as checker */}
+          {task?.checkedBy && user?.id === task.checkedBy.id && (
+            <button 
+              onClick={handleMarkAsChecked} 
+              className={canMarkAsChecked() ? "btn-primary" : "btn-outline"}
+              disabled={isMarkingChecked || !canMarkAsChecked()}
+              title={canMarkAsChecked() ? "Mark this task as checked" : "Task must be in DONE status before it can be checked"}
+            >
+              {isMarkingChecked ? 'Marking as Checked...' : 
+               canMarkAsChecked() ? 'Mark as Checked' : 
+               'Mark as Checked (Task must be DONE)'}
+            </button>
+          )}
+          {canEditTask() && (
+            <>
+              <Link to={`/tasks/${id}/edit`} className="btn-secondary">
+                Edit Task
+              </Link>
+              <button 
+                onClick={handleDeleteTask}
+                className="btn-danger"
+              >
+                Delete Task
+              </button>
+            </>
           )}
         </div>
       </div>
+
+      {message && (
+        <div className={`alert ${message.type === 'error' ? 'alert-danger' : 'alert-success'}`}>
+          {message.text}
+        </div>
+      )}
 
       <div className="task-details-grid">
         {/* Main Task Information Card */}

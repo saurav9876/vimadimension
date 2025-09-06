@@ -130,6 +130,22 @@ public class TaskController {
         }
     }
 
+    @GetMapping("/paginated")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Object>> getAllTasksPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            Map<String, Object> response = taskService.getAllTasksPaginated(page, size);
+            logger.info("Retrieved paginated tasks - page: {}, size: {}, total: {}", 
+                       page, size, response.get("totalElements"));
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error retrieving paginated tasks: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
     @GetMapping("/assigned-to-me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<Task>> getTasksAssignedToCurrentUser() {
@@ -258,6 +274,42 @@ public class TaskController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", "Failed to update task status");
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    @PutMapping("/{taskId}/mark-checked")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> markTaskAsChecked(@PathVariable Long taskId, Authentication authentication) {
+        try {
+            String username = authentication.getName();
+            Optional<Task> updatedTask = taskService.markTaskAsCompletedAndChecked(taskId, username);
+            
+            if (updatedTask.isPresent()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "Task marked as checked successfully");
+                response.put("task", updatedTask.get());
+                
+                logger.info("Marked task ID: {} as checked by user: {}", taskId, username);
+                return ResponseEntity.ok(response);
+            } else {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Task not found or you are not authorized to check this task");
+                return ResponseEntity.notFound().build();
+            }
+        } catch (IllegalStateException e) {
+            logger.error("Error marking task as checked for task ID {}: {}", taskId, e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        } catch (Exception e) {
+            logger.error("Error marking task as checked for task ID {}: {}", taskId, e.getMessage(), e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Failed to mark task as checked");
             return ResponseEntity.status(500).body(errorResponse);
         }
     }

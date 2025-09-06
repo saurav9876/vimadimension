@@ -5,6 +5,7 @@ public enum TaskStatus {
     IN_PROGRESS("In Progress"),
     IN_REVIEW("In Review"), // Optional
     DONE("Done"),
+    CHECKED("Checked"),
     ON_HOLD("On Hold"); // Optional
 
     private final String displayName;

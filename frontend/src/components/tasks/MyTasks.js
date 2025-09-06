@@ -5,9 +5,20 @@ const MyTasks = ({ user }) => {
   const [assignedTasks, setAssignedTasks] = useState([]);
   const [reportedTasks, setReportedTasks] = useState([]);
   const [tasksToCheck, setTasksToCheck] = useState([]);
+  const [allTasks, setAllTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('assigned');
+  
+  // Pagination state for All Tasks tab
+  const [allTasksPagination, setAllTasksPagination] = useState({
+    currentPage: 0,
+    totalPages: 0,
+    totalItems: 0,
+    hasNext: false,
+    hasPrevious: false,
+    pageSize: 10
+  });
 
   useEffect(() => {
     if (user) {
@@ -49,6 +60,9 @@ const MyTasks = ({ user }) => {
         setTasksToCheck(toCheckData);
       }
       
+      // Fetch first page of all tasks
+      await fetchAllTasksPaginated(0);
+      
       if (!assignedResponse.ok && !reportedResponse.ok && !toCheckResponse.ok) {
         setError('Failed to load tasks');
       }
@@ -60,12 +74,57 @@ const MyTasks = ({ user }) => {
     }
   };
 
+  const fetchAllTasksPaginated = async (page) => {
+    try {
+      const response = await fetch(`/api/tasks/paginated?page=${page}&size=${allTasksPagination.pageSize}`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setAllTasks(data.tasks);
+        setAllTasksPagination({
+          currentPage: data.currentPage,
+          totalPages: data.totalPages,
+          totalItems: data.totalItems,
+          hasNext: data.hasNext,
+          hasPrevious: data.hasPrevious,
+          pageSize: allTasksPagination.pageSize
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching paginated tasks:', error);
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 0 && newPage < allTasksPagination.totalPages) {
+      fetchAllTasksPaginated(newPage);
+    }
+  };
+
+  const canEditTask = (task) => {
+    if (!user || !task) return false;
+    
+    // User can edit if they are:
+    // 1. Assigned to the task
+    // 2. Creator of the task  
+    // 3. Assigned as checker of the task
+    return (
+      (task.assignee && task.assignee.id === user.id) ||
+      (task.reporter && task.reporter.id === user.id) ||
+      (task.checkedBy && task.checkedBy.id === user.id)
+    );
+  };
+
   const getStatusClass = (status) => {
     if (!status) return 'status-to-do';
     
     switch (status.toString().toLowerCase()) {
       case 'done':
         return 'status-done';
+      case 'checked':
+        return 'status-checked';
       case 'in_progress':
         return 'status-in-progress';
       case 'in_review':
@@ -84,6 +143,8 @@ const MyTasks = ({ user }) => {
     switch (priority.toString().toLowerCase()) {
       case 'high':
         return 'priority-high';
+      case 'urgent':
+        return 'priority-urgent';
       case 'low':
         return 'priority-low';
       case 'medium':
@@ -136,6 +197,30 @@ const MyTasks = ({ user }) => {
             </div>
           )}
           
+          {/* Show assignee and reporter info in All Tasks view */}
+          {activeTab === 'allTasks' && (
+            <>
+              {task.assignee && (
+                <div className="meta-item">
+                  <span className="meta-label">Assigned to:</span>
+                  <span className="assignee-info">{task.assignee.name || task.assignee.username}</span>
+                </div>
+              )}
+              {task.reporter && (
+                <div className="meta-item">
+                  <span className="meta-label">Created by:</span>
+                  <span className="reporter-info">{task.reporter.name || task.reporter.username}</span>
+                </div>
+              )}
+              {task.checkedBy && (
+                <div className="meta-item">
+                  <span className="meta-label">Checker:</span>
+                  <span className="checker-info">{task.checkedBy.name || task.checkedBy.username}</span>
+                </div>
+              )}
+            </>
+          )}
+          
           {task.dueDate && (
             <div className="meta-item">
               <span className="meta-label">Due:</span>
@@ -158,6 +243,11 @@ const MyTasks = ({ user }) => {
         <Link to={`/tasks/${task.id}/details`} className="btn-small btn-outline">
           View Details
         </Link>
+        {canEditTask(task) && (
+          <Link to={`/tasks/${task.id}/edit`} className="btn-small btn-secondary">
+            Edit Task
+          </Link>
+        )}
         <Link to={`/timelogs/task/${task.id}/new`} className="btn-small btn-primary">
           Log Time
         </Link>
@@ -176,7 +266,6 @@ const MyTasks = ({ user }) => {
   return (
     <div className="main-content">
       <div className="page-header">
-        <h1 className="page-title">My Tasks</h1>
         <div className="page-subtitle">
           {user?.name || user?.username}'s assigned and created tasks
         </div>
@@ -209,6 +298,13 @@ const MyTasks = ({ user }) => {
         >
           <span className="tab-icon">✅</span>
           Tasks to Check ({tasksToCheck.length})
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'allTasks' ? 'active' : ''}`}
+          onClick={() => setActiveTab('allTasks')}
+        >
+          <span className="tab-icon">📋</span>
+          All Tasks ({allTasks.length})
         </button>
       </div>
 
@@ -257,6 +353,76 @@ const MyTasks = ({ user }) => {
               <div className="tasks-grid">
                 {tasksToCheck.map(renderTaskCard)}
               </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'allTasks' && (
+          <div className="tasks-section">
+            {allTasks.length === 0 ? (
+              <div className="empty-state">
+                <span className="empty-icon">📋</span>
+                <h3>No tasks found</h3>
+                <p>There are no tasks in the system yet.</p>
+              </div>
+            ) : (
+              <>
+                <div className="tasks-grid">
+                  {allTasks.map(renderTaskCard)}
+                </div>
+                
+                {/* Pagination Controls */}
+                {allTasksPagination.totalPages > 1 && (
+                  <div className="pagination-controls">
+                    <div className="pagination-info">
+                      Showing {allTasksPagination.currentPage * allTasksPagination.pageSize + 1} to {Math.min((allTasksPagination.currentPage + 1) * allTasksPagination.pageSize, allTasksPagination.totalItems)} of {allTasksPagination.totalItems} tasks
+                    </div>
+                    
+                    <div className="pagination-buttons">
+                      <button 
+                        className="btn-small btn-outline"
+                        onClick={() => handlePageChange(allTasksPagination.currentPage - 1)}
+                        disabled={!allTasksPagination.hasPrevious}
+                      >
+                        ← Previous
+                      </button>
+                      
+                      <div className="page-numbers">
+                        {Array.from({ length: Math.min(5, allTasksPagination.totalPages) }, (_, i) => {
+                          let pageNum;
+                          if (allTasksPagination.totalPages <= 5) {
+                            pageNum = i;
+                          } else if (allTasksPagination.currentPage <= 2) {
+                            pageNum = i;
+                          } else if (allTasksPagination.currentPage >= allTasksPagination.totalPages - 3) {
+                            pageNum = allTasksPagination.totalPages - 5 + i;
+                          } else {
+                            pageNum = allTasksPagination.currentPage - 2 + i;
+                          }
+                          
+                          return (
+                            <button
+                              key={pageNum}
+                              className={`btn-small ${pageNum === allTasksPagination.currentPage ? 'btn-primary' : 'btn-outline'}`}
+                              onClick={() => handlePageChange(pageNum)}
+                            >
+                              {pageNum + 1}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      
+                      <button 
+                        className="btn-small btn-outline"
+                        onClick={() => handlePageChange(allTasksPagination.currentPage + 1)}
+                        disabled={!allTasksPagination.hasNext}
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

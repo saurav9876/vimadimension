@@ -90,6 +90,8 @@ public class OrganizationRegistrationController {
             adminUser.setName(request.getAdminName()); // Add the name field
             adminUser.setEmail(request.getAdminEmail());
             adminUser.setPassword(passwordEncoder.encode(request.getAdminPassword()));
+            adminUser.setDesignation(request.getAdminDesignation());
+            adminUser.setSpecialization(request.getAdminSpecialization());
             adminUser.setEnabled(true);
             adminUser.setOrganization(savedOrganization);
             adminUser.setRoles(Set.of(adminRole.get()));
@@ -120,6 +122,8 @@ public class OrganizationRegistrationController {
         private String adminUsername;
         private String adminEmail;
         private String adminPassword;
+        private String adminDesignation;
+        private String adminSpecialization;
 
         // Getters and setters
         public String getOrganizationName() { return organizationName; }
@@ -151,5 +155,11 @@ public class OrganizationRegistrationController {
 
         public String getAdminPassword() { return adminPassword; }
         public void setAdminPassword(String adminPassword) { this.adminPassword = adminPassword; }
+
+        public String getAdminDesignation() { return adminDesignation; }
+        public void setAdminDesignation(String adminDesignation) { this.adminDesignation = adminDesignation; }
+
+        public String getAdminSpecialization() { return adminSpecialization; }
+        public void setAdminSpecialization(String adminSpecialization) { this.adminSpecialization = adminSpecialization; }
     }
 }
