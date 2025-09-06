@@ -19,6 +19,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import org.example.models.enums.ProjectStatus;
 
 @Service
 public class ProjectService {
@@ -98,9 +100,34 @@ public class ProjectService {
         // This would require adding a method to ProjectRepository
         // For now, let's filter from all projects (not optimal for large datasets)
         return projectRepository.findAll().stream()
-                .filter(project -> project.getOrganization() != null && 
-                                 project.getOrganization().getId().equals(user.getOrganization().getId()))
-                .toList();
+                .filter(project -> Objects.equals(project.getOrganization(), user.getOrganization()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Counts projects by organization.
+     *
+     * @param organizationId The ID of the organization.
+     * @return The count of projects belonging to the specified organization.
+     */
+    public long countProjectsByOrganization(Long organizationId) {
+        if (organizationId == null) {
+            throw new IllegalArgumentException("Organization ID cannot be null");
+        }
+        return projectRepository.countByOrganization_Id(organizationId);
+    }
+
+    /**
+     * Counts active projects by organization.
+     *
+     * @param organizationId The ID of the organization.
+     * @return The count of active projects belonging to the specified organization.
+     */
+    public long countActiveProjectsByOrganization(Long organizationId) {
+        if (organizationId == null) {
+            throw new IllegalArgumentException("Organization ID cannot be null");
+        }
+        return projectRepository.countByOrganization_IdAndStatusNot(organizationId, ProjectStatus.COMPLETED);
     }
 
     @Transactional // This ensures all database operations are part of a single transaction
@@ -149,6 +176,12 @@ public class ProjectService {
         project.setStatus(projectCreateDto.getStatus());
         project.setProjectStage(projectCreateDto.getProjectStage());
         project.setDescription(projectCreateDto.getDescription() != null ? projectCreateDto.getDescription().trim() : null);
+        
+        // --- SET NEW CRITICAL FIELDS ---
+        project.setBudget(projectCreateDto.getBudget());
+        project.setActualCost(projectCreateDto.getActualCost());
+        project.setPriority(projectCreateDto.getPriority() != null ? projectCreateDto.getPriority() : org.example.models.enums.ProjectPriority.MEDIUM);
+        
         project.setOrganization(creator.getOrganization()); // Set the organization from the user
         
         logger.info("Creating project '{}' for organization: {}", project.getName(), creator.getOrganization().getName());
@@ -271,6 +304,28 @@ public class ProjectService {
             }
         }
 
+        // --- UPDATE NEW CRITICAL FIELDS ---
+        if (projectUpdateDto.getBudget() != null) {
+            if (!Objects.equals(projectToUpdate.getBudget(), projectUpdateDto.getBudget())) {
+                projectToUpdate.setBudget(projectUpdateDto.getBudget());
+                updated = true;
+            }
+        }
+
+        if (projectUpdateDto.getActualCost() != null) {
+            if (!Objects.equals(projectToUpdate.getActualCost(), projectUpdateDto.getActualCost())) {
+                projectToUpdate.setActualCost(projectUpdateDto.getActualCost());
+                updated = true;
+            }
+        }
+
+        if (projectUpdateDto.getPriority() != null) {
+            if (!Objects.equals(projectToUpdate.getPriority(), projectUpdateDto.getPriority())) {
+                projectToUpdate.setPriority(projectUpdateDto.getPriority());
+                updated = true;
+            }
+        }
+
         if (updated) {
             Project savedProject = projectRepository.save(projectToUpdate);
             logger.info("Project ID {} updated. New name: {}", savedProject.getId(), savedProject.getName());
@@ -288,11 +343,25 @@ public class ProjectService {
             return false; // Or throw ProjectNotFoundException
         }
 
+        Project project = projectOptional.get();
+
         // Check if there are any tasks associated with this project
         if (taskRepository.existsByProjectId(projectId)) {
             logger.warn("Attempt to delete project ID {} which has associated tasks. Deletion prevented.", projectId);
             throw new IllegalStateException("Cannot delete project with ID " + projectId + " as it has associated tasks. Please delete or reassign tasks first.");
         }
+
+        // Remove the project from all users' accessible projects to avoid foreign key constraint violation
+        // Get all users who have access to this project and remove the association
+        for (User user : project.getAccessibleByUsers()) {
+            user.getAccessibleProjects().remove(project);
+        }
+        
+        // Clear the associations from the project side as well
+        project.getAccessibleByUsers().clear();
+        
+        // Save the project to persist the cleared associations before deletion
+        projectRepository.save(project);
 
         projectRepository.deleteById(projectId);
         logger.info("Project with ID: {} deleted successfully.", projectId);

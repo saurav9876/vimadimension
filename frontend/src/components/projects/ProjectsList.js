@@ -33,32 +33,12 @@ const ProjectsList = ({ user }) => {
     }
   };
 
-  const handleDeleteProject = async (projectId) => {
-    if (window.confirm('Are you sure you want to delete this project?')) {
-      try {
-        const response = await fetch(`/api/projects/${projectId}/delete`, {
-          method: 'POST',
-          credentials: 'include'
-        });
-
-        if (response.ok) {
-          setProjects(projects.filter(p => p.id !== projectId));
-        } else {
-          setError('Failed to delete project');
-        }
-      } catch (error) {
-        console.error('Error deleting project:', error);
-        setError('Failed to delete project');
-      }
-    }
-  };
 
   if (loading) return <div className="main-content">Loading...</div>;
 
   return (
     <div className="main-content">
       <div className="page-header">
-        <h1 className="page-title">Projects</h1>
         <div className="page-actions">
           <Link to="/projects/new" className="btn-primary">
             New Project
@@ -82,9 +62,14 @@ const ProjectsList = ({ user }) => {
             <div key={project.id} className="project-card">
               <div className="project-header">
                 <h3>{project.name}</h3>
-                <span className={`project-status status-${project.status?.toLowerCase().replace(' ', '-')}`}>
-                  {project.status?.replace('_', ' ')}
-                </span>
+                <div className="project-badges">
+                  <span className={`project-status status-${project.status?.toLowerCase().replace(/[ _]/g, '-')}`}>
+                    {project.status?.replace('_', ' ')}
+                  </span>
+                  <span className={`priority-badge ${project.priority?.toLowerCase().replace(/[ _]/g, '-')}-priority`}>
+                    {project.priority?.replace('_', ' ')}
+                  </span>
+                </div>
               </div>
               
               <div className="project-info">
@@ -124,6 +109,26 @@ const ProjectsList = ({ user }) => {
                     <span className="info-value">{project.description}</span>
                   </div>
                 )}
+                {project.budget && (
+                  <div className="info-row">
+                    <span className="info-label">Budget:</span>
+                    <span className="info-value">${parseFloat(project.budget).toLocaleString()}</span>
+                  </div>
+                )}
+                {project.actualCost && (
+                  <div className="info-row">
+                    <span className="info-label">Actual Cost:</span>
+                    <span className="info-value">${parseFloat(project.actualCost).toLocaleString()}</span>
+                  </div>
+                )}
+                {project.budget && project.actualCost && (
+                  <div className="info-row">
+                    <span className="info-label">Cost Status:</span>
+                    <span className={`info-value ${parseFloat(project.actualCost) > parseFloat(project.budget) ? 'text-danger' : 'text-success'}`}>
+                      {parseFloat(project.actualCost) > parseFloat(project.budget) ? 'Over Budget' : 'Under Budget'}
+                    </span>
+                  </div>
+                )}
               </div>
               
               <div className="project-actions">
@@ -133,23 +138,6 @@ const ProjectsList = ({ user }) => {
                 >
                   View Details
                 </Link>
-                {/* Only show Edit and Delete buttons for admin users */}
-                {isAdmin && (
-                  <>
-                    <Link 
-                      to={`/projects/${project.id}/edit`} 
-                      className="btn-small btn-outline"
-                    >
-                      Edit
-                    </Link>
-                    <button 
-                      onClick={() => handleDeleteProject(project.id)}
-                      className="btn-small btn-danger"
-                    >
-                      Delete
-                    </button>
-                  </>
-                )}
               </div>
             </div>
           ))}

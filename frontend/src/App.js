@@ -11,10 +11,13 @@ import TaskDetails from './components/tasks/TaskDetails';
 import TaskForm from './components/tasks/TaskForm';
 import TaskEditForm from './components/tasks/TaskEditForm';
 import TimeLogForm from './components/tasks/TimeLogForm';
+import MyTasks from './components/tasks/MyTasks';
 import RegisterUser from './components/admin/RegisterUser';
 import UsersList from './components/admin/UsersList';
 import AdminDashboard from './components/admin/AdminDashboard';
 import CreateUser from './components/admin/CreateUser';
+import EditUser from './components/admin/EditUser';
+import UserDetails from './components/admin/UserDetails';
 import OrganizationRegister from './components/organization/OrganizationRegister';
 
 const App = () => {
@@ -48,7 +51,7 @@ const App = () => {
 
   const handleLogout = async () => {
     try {
-      await fetch('/logout', {
+      await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include'
       });
@@ -71,38 +74,41 @@ const App = () => {
           <Route 
             path="/login" 
             element={
-              user ? <Navigate to="/projects" replace /> : <Login onLogin={handleLogin} />
+              user ? <Navigate to="/profile" replace /> : <Login onLogin={handleLogin} />
             } 
           />
           
           <Route 
             path="/register" 
             element={
-              user ? <Navigate to="/projects" replace /> : <OrganizationRegister />
+              user ? <Navigate to="/profile" replace /> : <OrganizationRegister />
             } 
           />
           
           <Route 
             path="/" 
-            element={<Navigate to={user ? "/projects" : "/login"} replace />} 
+            element={<Navigate to={user ? "/profile" : "/login"} replace />} 
           />
           
           {/* Protected routes */}
           {user ? (
             <>
-              <Route path="/profile" element={<UserProfile user={user} />} />
+              <Route path="/profile" element={<UserProfile user={user} onUserUpdate={checkAuthStatus} />} />
+              <Route path="/my-tasks" element={<MyTasks user={user} />} />
               <Route path="/projects" element={<ProjectsList user={user} />} />
               <Route path="/projects/new" element={<CreateProject />} />
               <Route path="/projects/:id/details" element={<ProjectDetails user={user} />} />
               <Route path="/projects/:id/edit" element={<EditProject user={user} />} />
-              <Route path="/tasks/:id/details" element={<TaskDetails />} />
+              <Route path="/tasks/:id/details" element={<TaskDetails user={user} />} />
               <Route path="/projects/:projectId/tasks/new" element={<TaskForm />} />
               <Route path="/tasks/:id/edit" element={<TaskEditForm />} />
-              <Route path="/tasks/:id/timelog" element={<TimeLogForm />} />
+              <Route path="/timelogs/task/:id/new" element={<TimeLogForm />} />
               <Route path="/admin/dashboard" element={<AdminDashboard user={user} />} />
               <Route path="/admin/register" element={<RegisterUser />} />
               <Route path="/admin/users" element={<UsersList />} />
               <Route path="/admin/users/create" element={<CreateUser />} />
+              <Route path="/admin/users/:userId/edit" element={<EditUser />} />
+              <Route path="/admin/users/:userId/details" element={<UserDetails />} />
             </>
           ) : (
             <Route path="*" element={<Navigate to="/login" replace />} />

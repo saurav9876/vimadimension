@@ -3,21 +3,76 @@ package org.example.dto;
 import org.example.models.enums.ProjectCategory;
 import org.example.models.enums.ProjectStatus;
 import org.example.models.enums.ProjectStage;
+import org.example.models.enums.ProjectPriority;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class ProjectUpdateDto {
+    private String name;
+    private String clientName;
+    private LocalDate startDate;
+    private LocalDate estimatedEndDate;
+    private String location;
+    private ProjectCategory projectCategory;
+    private ProjectStatus status;
+    private ProjectStage projectStage;
+    private String description;
+    
+    // --- NEW CRITICAL FIELDS ---
+    private BigDecimal budget;
+    private BigDecimal actualCost;
+    private ProjectPriority priority;
 
-    private String name; // If null, no change
-    private String clientName; // If null, no change
-    private LocalDate startDate; // If null, no change
-    private LocalDate estimatedEndDate; // If null, no change
-    private String location; // If null, no change
-    private ProjectCategory projectCategory; // If null, no change
-    private ProjectStatus status; // If null, no change
-    private ProjectStage projectStage; // If null, no change
-    private String description; // If null, no change
+    // Constructors
+    public ProjectUpdateDto() {
+    }
 
-    // Getters and Setters
+    public ProjectUpdateDto(String name, String clientName, LocalDate startDate, LocalDate estimatedEndDate, 
+                          String location, ProjectCategory projectCategory, ProjectStatus status, 
+                          ProjectStage projectStage, String description, BigDecimal budget, 
+                          BigDecimal actualCost, ProjectPriority priority) {
+        this.name = name;
+        this.clientName = clientName;
+        this.startDate = startDate;
+        this.estimatedEndDate = estimatedEndDate;
+        this.location = location;
+        this.projectCategory = projectCategory;
+        this.status = status;
+        this.projectStage = projectStage;
+        this.description = description;
+        this.budget = budget;
+        this.actualCost = actualCost;
+        this.priority = priority;
+    }
+
+    // --- NEW GETTERS AND SETTERS FOR CRITICAL FIELDS ---
+    
+    public BigDecimal getBudget() {
+        return budget;
+    }
+
+    public void setBudget(BigDecimal budget) {
+        this.budget = budget;
+    }
+
+    public BigDecimal getActualCost() {
+        return actualCost;
+    }
+
+    public void setActualCost(BigDecimal actualCost) {
+        this.actualCost = actualCost;
+    }
+
+    public ProjectPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(ProjectPriority priority) {
+        this.priority = priority;
+    }
+
+    // --- EXISTING GETTERS AND SETTERS ---
+    
     public String getName() {
         return name;
     }
@@ -32,6 +87,14 @@ public class ProjectUpdateDto {
 
     public void setClientName(String clientName) {
         this.clientName = clientName;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public LocalDate getStartDate() {
@@ -80,13 +143,5 @@ public class ProjectUpdateDto {
 
     public void setProjectStage(ProjectStage projectStage) {
         this.projectStage = projectStage;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 }

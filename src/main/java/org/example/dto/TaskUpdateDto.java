@@ -1,6 +1,9 @@
 package org.example.dto;
 
 import org.example.models.enums.TaskStatus; // Assuming TaskStatus enum is in org.example.models.enums
+import org.example.models.enums.TaskPriority;
+import org.example.models.enums.ProjectStage;
+import java.time.LocalDate;
 // import jakarta.validation.constraints.Size; // For validation
 // import jakarta.validation.constraints.Pattern; // For specific patterns if needed
 
@@ -19,6 +22,12 @@ public class TaskUpdateDto {
     private Long assigneeId; // If null, means no change. To unassign, a special value or specific handling in service is needed.
 
     private TaskStatus status; // If null, means no change to status
+
+    private ProjectStage projectStage; // If null, means no change to project stage
+
+    private TaskPriority priority; // If null, means no change to priority
+
+    private LocalDate dueDate; // If null, means no change to due date
 
     // Getters and Setters
     public Long getId() {
@@ -67,5 +76,29 @@ public class TaskUpdateDto {
 
     public void setStatus(TaskStatus status) {
         this.status = status;
+    }
+
+    public ProjectStage getProjectStage() {
+        return projectStage;
+    }
+
+    public void setProjectStage(ProjectStage projectStage) {
+        this.projectStage = projectStage;
+    }
+
+    public TaskPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(TaskPriority priority) {
+        this.priority = priority;
+    }
+
+    public LocalDate getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(LocalDate dueDate) {
+        this.dueDate = dueDate;
     }
 }

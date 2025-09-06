@@ -24,3 +24,4 @@ public enum ProjectCategory {
         return displayName;
     }
 }
+

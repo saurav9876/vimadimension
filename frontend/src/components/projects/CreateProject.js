@@ -11,7 +11,10 @@ const CreateProject = () => {
     projectCategory: '',
     status: '',
     projectStage: '',
-    description: ''
+    description: '',
+    budget: '',
+    actualCost: '',
+    priority: 'MEDIUM'
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,6 +48,13 @@ const CreateProject = () => {
     { value: 'STAGE_07_USE', label: 'Stage 07: Use' }
   ];
 
+  const projectPriorities = [
+    { value: 'LOW', label: 'Low' },
+    { value: 'MEDIUM', label: 'Medium' },
+    { value: 'HIGH', label: 'High' },
+    { value: 'URGENT', label: 'Urgent' }
+  ];
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -72,7 +82,10 @@ const CreateProject = () => {
           'projectCategory': formData.projectCategory,
           'status': formData.status,
           'projectStage': formData.projectStage,
-          'description': formData.description
+          'description': formData.description,
+          'budget': formData.budget,
+          'actualCost': formData.actualCost,
+          'priority': formData.priority
         }),
         credentials: 'include'
       });
@@ -230,6 +243,53 @@ const CreateProject = () => {
               {projectStages.map(stage => (
                 <option key={stage.value} value={stage.value}>
                   {stage.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="budget">Budget:</label>
+              <input
+                type="number"
+                id="budget"
+                name="budget"
+                value={formData.budget}
+                onChange={handleChange}
+                step="0.01"
+                min="0"
+                placeholder="Enter project budget"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="actualCost">Actual Cost:</label>
+              <input
+                type="number"
+                id="actualCost"
+                name="actualCost"
+                value={formData.actualCost}
+                onChange={handleChange}
+                step="0.01"
+                min="0"
+                placeholder="Enter actual cost incurred"
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="priority">Project Priority *:</label>
+            <select
+              id="priority"
+              name="priority"
+              value={formData.priority}
+              onChange={handleChange}
+              required
+            >
+              {projectPriorities.map(priority => (
+                <option key={priority.value} value={priority.value}>
+                  {priority.value}
                 </option>
               ))}
             </select>

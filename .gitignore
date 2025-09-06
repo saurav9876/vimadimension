@@ -2,6 +2,7 @@
 .gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
 
 # Frontend
 frontend/build/
@@ -16,10 +17,10 @@ src/main/resources/static/asset-manifest.json
 
 # IDE
 .idea/
+.vscode/
 *.iml
 *.ipr
 *.iws
-.vscode/
 
 # Compiled Java
 *.class
@@ -34,6 +35,50 @@ Thumbs.db
 *.log
 logs/
 
+# Runtime
+*.pid
+*.port
+
+# Node modules (for frontend)
+frontend/node_modules/
+frontend/build/
+
+# Git
+.git/
+
+# Docker (allow docker-compose.yml and Dockerfile, but block volumes)
+.dockerignore
+docker-volumes/
+
+# Environment files (contain sensitive data)
+.env
+.env.local
+.env.production
+env.local
+env.production
+
+# Tests
+src/test/
+test/
+
 # Temporary files
 *.tmp
 *.temp
+
+# Database files (never commit actual data)
+*.sql
+*.dump
+*.backup
+data/
+mysql-data/
+
+# Build artifacts (already covered above, but explicit)
+.gradle/
+build/
+out/
+target/
+
+# Cookie files (contain sensitive session data)
+*.cookies.txt
+cookies*.txt
+*_cookies.txt

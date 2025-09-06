@@ -4,19 +4,28 @@ import org.example.models.Project;
 import org.example.models.Task;
 import org.example.models.enums.TaskStatus;
 import org.example.models.enums.ProjectStage;
+import org.example.models.enums.TaskPriority;
 import org.example.models.User;
 import org.example.repository.ProjectRepository;
 import org.example.repository.TaskRepository;
 import org.example.repository.UserRepository;
 // import org.example.repository.TimeLogRepository; // Keep for when you implement TimeLog deletion logic
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -60,7 +69,7 @@ public class TaskService {
     }
 
     @Transactional
-    public Task createTask(String name, String description, ProjectStage projectStage, Long projectId, Optional<Long> assigneeIdOpt) {
+    public Task createTask(String name, String description, ProjectStage projectStage, Long projectId, Optional<Long> assigneeIdOpt, Optional<Long> checkedByIdOpt) {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Task name cannot be empty.");
         }
@@ -78,6 +87,12 @@ public class TaskService {
                     .orElseThrow(() -> new IllegalArgumentException("Assignee user with ID " + assigneeIdOpt.get() + " not found."));
         }
 
+        User checkedBy = null;
+        if (checkedByIdOpt.isPresent()) {
+            checkedBy = userRepository.findById(checkedByIdOpt.get())
+                    .orElseThrow(() -> new IllegalArgumentException("Checker user with ID " + checkedByIdOpt.get() + " not found."));
+        }
+
         Task newTask = new Task();
         newTask.setName(name.trim());
         newTask.setDescription(description != null ? description.trim() : null);
@@ -85,6 +100,7 @@ public class TaskService {
         newTask.setProject(project);
         newTask.setReporter(reporter);
         newTask.setAssignee(assignee);
+        newTask.setCheckedBy(checkedBy);
         newTask.setStatus(TaskStatus.TO_DO); // Default status
         // createdAt and updatedAt are handled by @PrePersist in Task entity
 
@@ -97,6 +113,41 @@ public class TaskService {
 
     public List<Task> getAllTasks() {
         return taskRepository.findAll();
+    }
+
+    /**
+     * Retrieves all tasks with pagination.
+     *
+     * @param page The page number (0-based)
+     * @param size The number of tasks per page
+     * @return A map containing paginated tasks and metadata
+     */
+    public Map<String, Object> getAllTasksPaginated(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("updatedAt").descending());
+        Page<Task> taskPage = taskRepository.findAll(pageable);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("tasks", taskPage.getContent());
+        response.put("currentPage", taskPage.getNumber());
+        response.put("totalItems", taskPage.getTotalElements());
+        response.put("totalPages", taskPage.getTotalPages());
+        response.put("hasNext", taskPage.hasNext());
+        response.put("hasPrevious", taskPage.hasPrevious());
+        
+        return response;
+    }
+
+    /**
+     * Counts tasks by organization.
+     *
+     * @param organizationId The ID of the organization.
+     * @return The count of tasks belonging to the specified organization.
+     */
+    public long countTasksByOrganization(Long organizationId) {
+        if (organizationId == null) {
+            throw new IllegalArgumentException("Organization ID cannot be null");
+        }
+        return taskRepository.countByProject_Organization_Id(organizationId);
     }
 
     public List<Task> getTasksByProjectId(Long projectId) {
@@ -117,12 +168,17 @@ public class TaskService {
 
     public List<Task> getTasksAssignedToCurrentUser() {
         User currentUser = getCurrentAuthenticatedUser();
-        return taskRepository.findByAssignee(currentUser);
+        return taskRepository.findByAssigneeAndStatusNotIn(currentUser, Arrays.asList(TaskStatus.DONE, TaskStatus.CHECKED));
     }
 
     public List<Task> getTasksReportedByCurrentUser() {
         User currentUser = getCurrentAuthenticatedUser();
-        return taskRepository.findByReporter(currentUser);
+        return taskRepository.findByReporterAndStatusNotIn(currentUser, Arrays.asList(TaskStatus.DONE, TaskStatus.CHECKED));
+    }
+
+    public List<Task> getTasksToCheckByCurrentUser() {
+        User currentUser = getCurrentAuthenticatedUser();
+        return taskRepository.findByCheckedByAndStatus(currentUser, TaskStatus.DONE);
     }
 
 
@@ -231,6 +287,88 @@ public class TaskService {
     }
 
     @Transactional
+    public Task updateTaskComplete(Long taskId, String name, String description, String projectStage, 
+                                  String status, String priority, String dueDate, Long assigneeId, Long checkedById) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Task name cannot be empty.");
+        }
+        if (projectStage == null || projectStage.trim().isEmpty()) {
+            throw new IllegalArgumentException("Project stage cannot be empty.");
+        }
+        if (status == null || status.trim().isEmpty()) {
+            throw new IllegalArgumentException("Task status cannot be empty.");
+        }
+
+        Task taskToUpdate = taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("Task with ID " + taskId + " not found."));
+
+        // Authorization check: User can only edit tasks they are assigned to, created, or assigned as checker
+        User currentUser = getCurrentAuthenticatedUser();
+        validateTaskEditPermission(taskToUpdate, currentUser);
+
+        // Parse enums
+        ProjectStage projectStageEnum;
+        try {
+            projectStageEnum = ProjectStage.valueOf(projectStage);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid project stage: " + projectStage);
+        }
+
+        TaskStatus statusEnum;
+        try {
+            statusEnum = TaskStatus.valueOf(status);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid task status: " + status);
+        }
+
+        TaskPriority priorityEnum;
+        try {
+            priorityEnum = TaskPriority.valueOf(priority);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid task priority: " + priority);
+        }
+
+        // Update fields
+        taskToUpdate.setName(name.trim());
+        taskToUpdate.setDescription(description != null ? description.trim() : null);
+        taskToUpdate.setProjectStage(projectStageEnum);
+        taskToUpdate.setStatus(statusEnum);
+        taskToUpdate.setPriority(priorityEnum);
+
+        // Handle due date
+        if (dueDate != null && !dueDate.trim().isEmpty()) {
+            try {
+                taskToUpdate.setDueDate(LocalDate.parse(dueDate.trim()));
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Invalid due date format: " + dueDate);
+            }
+        } else {
+            taskToUpdate.setDueDate(null);
+        }
+
+        // Handle assignee
+        if (assigneeId != null) {
+            User assignee = userRepository.findById(assigneeId)
+                    .orElseThrow(() -> new IllegalArgumentException("User with ID " + assigneeId + " not found."));
+            taskToUpdate.setAssignee(assignee);
+        } else {
+            taskToUpdate.setAssignee(null);
+        }
+
+        // Handle checked by
+        if (checkedById != null) {
+            User checkedBy = userRepository.findById(checkedById)
+                    .orElseThrow(() -> new IllegalArgumentException("User with ID " + checkedById + " not found."));
+            taskToUpdate.setCheckedBy(checkedBy);
+        } else {
+            taskToUpdate.setCheckedBy(null);
+        }
+
+        // updatedAt is handled by @PreUpdate in Task entity
+        return taskRepository.save(taskToUpdate);
+    }
+
+    @Transactional
     public Optional<Task> updateTaskStatus(Long taskId, TaskStatus newStatus) {
         Task taskToUpdate = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Task with ID " + taskId + " not found."));
@@ -239,7 +377,37 @@ public class TaskService {
             throw new IllegalArgumentException("New status cannot be null.");
         }
 
+        // Authorization check: User can only update status of tasks they are assigned to, created, or assigned as checker
+        User currentUser = getCurrentAuthenticatedUser();
+        validateTaskEditPermission(taskToUpdate, currentUser);
+
         taskToUpdate.setStatus(newStatus);
+        // updatedAt is handled by @PreUpdate in Task entity
+        return Optional.of(taskRepository.save(taskToUpdate));
+    }
+
+    @Transactional
+    public Optional<Task> markTaskAsCompletedAndChecked(Long taskId, String checkerUsername) {
+        Task taskToUpdate = taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("Task with ID " + taskId + " not found."));
+
+        // Get the current user (checker)
+        User checker = userRepository.findByUsername(checkerUsername)
+                .orElseThrow(() -> new IllegalArgumentException("User with username " + checkerUsername + " not found."));
+
+        // Verify that the current user is authorized to check this task
+        if (taskToUpdate.getCheckedBy() == null || !taskToUpdate.getCheckedBy().getId().equals(checker.getId())) {
+            throw new IllegalStateException("You are not authorized to check this task. Only the assigned checker can mark this task as checked.");
+        }
+
+        // Verify that the task is in DONE status before allowing it to be marked as checked
+        if (taskToUpdate.getStatus() != TaskStatus.DONE) {
+            throw new IllegalStateException("Task must be in DONE status before it can be marked as checked.");
+        }
+
+        // Update the status to CHECKED
+        taskToUpdate.setStatus(TaskStatus.CHECKED);
+        
         // updatedAt is handled by @PreUpdate in Task entity
         return Optional.of(taskRepository.save(taskToUpdate));
     }
@@ -267,5 +435,39 @@ public class TaskService {
 
     public boolean taskExists(Long taskId) {
         return taskRepository.existsById(taskId);
+    }
+
+    /**
+     * Validates if the current user has permission to edit the given task.
+     * A user can edit a task if they are:
+     * 1. Assigned to the task
+     * 2. Creator/reporter of the task
+     * 3. Assigned as checker of the task
+     *
+     * @param task The task to check permissions for
+     * @param currentUser The current authenticated user
+     * @throws IllegalArgumentException if the user doesn't have permission
+     */
+    private void validateTaskEditPermission(Task task, User currentUser) {
+        boolean canEdit = false;
+        
+        // Check if user is assigned to the task
+        if (task.getAssignee() != null && task.getAssignee().getId().equals(currentUser.getId())) {
+            canEdit = true;
+        }
+        
+        // Check if user is the creator/reporter of the task
+        if (task.getReporter() != null && task.getReporter().getId().equals(currentUser.getId())) {
+            canEdit = true;
+        }
+        
+        // Check if user is assigned as checker of the task
+        if (task.getCheckedBy() != null && task.getCheckedBy().getId().equals(currentUser.getId())) {
+            canEdit = true;
+        }
+        
+        if (!canEdit) {
+            throw new IllegalArgumentException("You do not have permission to edit this task. You can only edit tasks that are assigned to you, created by you, or assigned to you for checking.");
+        }
     }
 }

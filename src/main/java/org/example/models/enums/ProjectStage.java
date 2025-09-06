@@ -24,3 +24,4 @@ public enum ProjectStage {
         return displayName;
     }
 }
+

@@ -7,11 +7,17 @@ const TaskEditForm = () => {
     name: '',
     description: '',
     projectStage: '',
-    status: ''
+    status: '',
+    priority: 'MEDIUM',
+    dueDate: '',
+    assigneeId: '',
+    checkedById: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [fetchingUsers, setFetchingUsers] = useState(true);
   const navigate = useNavigate();
 
   const projectStages = [
@@ -32,9 +38,36 @@ const TaskEditForm = () => {
     { value: 'ON_HOLD', label: 'On Hold' }
   ];
 
+  const taskPriorities = [
+    { value: 'LOW', label: 'Low', cssClass: 'priority-low' },
+    { value: 'MEDIUM', label: 'Medium', cssClass: 'priority-medium' },
+    { value: 'HIGH', label: 'High', cssClass: 'priority-high' },
+    { value: 'URGENT', label: 'Urgent', cssClass: 'priority-urgent' }
+  ];
+
   useEffect(() => {
     fetchTask();
+    fetchUsers();
   }, [id]);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/admin/users', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.users) {
+          setUsers(data.users);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setFetchingUsers(false);
+    }
+  };
 
   const fetchTask = async () => {
     try {
@@ -44,11 +77,16 @@ const TaskEditForm = () => {
       
       if (response.ok) {
         const data = await response.json();
+        const task = data.task || data; // Handle both wrapped and direct response formats
         setFormData({
-          name: data.name || '',
-          description: data.description || '',
-          projectStage: data.projectStage || '',
-          status: data.status || ''
+          name: task.name || '',
+          description: task.description || '',
+          projectStage: task.projectStage || '',
+          status: task.status || '',
+          priority: task.priority || 'MEDIUM',
+          dueDate: task.dueDate ? task.dueDate.substring(0, 10) : '',
+          assigneeId: task.assignee ? task.assignee.id : '',
+          checkedById: task.checkedBy ? task.checkedBy.id : ''
         });
       } else {
         setError('Task not found');
@@ -83,7 +121,11 @@ const TaskEditForm = () => {
           'name': formData.name,
           'description': formData.description,
           'projectStage': formData.projectStage,
-          'status': formData.status
+          'status': formData.status,
+          'priority': formData.priority,
+          'dueDate': formData.dueDate,
+          'assigneeId': formData.assigneeId,
+          'checkedById': formData.checkedById
         }),
         credentials: 'include'
       });
@@ -106,7 +148,18 @@ const TaskEditForm = () => {
 
   return (
     <div className="main-content">
-      <h1 className="page-title">Edit Task</h1>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h1 className="page-title">Edit Task</h1>
+        <div>
+          <button 
+            type="button" 
+            className="btn-outline"
+            onClick={() => navigate(`/tasks/${id}/details`)}
+          >
+            ← Back to Task
+          </button>
+        </div>
+      </div>
 
       {error && (
         <div className="alert alert-danger">
@@ -131,14 +184,14 @@ const TaskEditForm = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="description">Description:</label>
+            <label htmlFor="description">Acceptance Criteria:</label>
             <textarea
               id="description"
               name="description"
               value={formData.description}
               onChange={handleChange}
               rows="4"
-              placeholder="Enter task description (optional)"
+              placeholder="This task will be done when the following acceptance criteria is completed..."
             />
           </div>
 
@@ -180,6 +233,75 @@ const TaskEditForm = () => {
             </div>
           </div>
 
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="priority">Priority:</label>
+              <select
+                id="priority"
+                name="priority"
+                value={formData.priority}
+                onChange={handleChange}
+              >
+                {taskPriorities.map(priority => (
+                  <option key={priority.value} value={priority.value}>
+                    {priority.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="dueDate">Due Date:</label>
+              <input
+                type="date"
+                id="dueDate"
+                name="dueDate"
+                value={formData.dueDate}
+                onChange={handleChange}
+                placeholder="Select due date (optional)"
+              />
+              <small className="form-help">Optional due date for the task</small>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="assigneeId">Assign To:</label>
+              <select
+                id="assigneeId"
+                name="assigneeId"
+                value={formData.assigneeId}
+                onChange={handleChange}
+              >
+                <option value="">Unassigned</option>
+                {!fetchingUsers && users.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name || user.username}
+                  </option>
+                ))}
+              </select>
+              <small className="form-help">Optional: assign task to a team member</small>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="checkedById">Checked By:</label>
+              <select
+                id="checkedById"
+                name="checkedById"
+                value={formData.checkedById}
+                onChange={handleChange}
+              >
+                <option value="">No checker assigned</option>
+                {!fetchingUsers && users.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name || user.username}
+                  </option>
+                ))}
+              </select>
+              <small className="form-help">Optional: assign a checker to verify task completion</small>
+            </div>
+          </div>
+
           <div className="project-actions">
             <button 
               type="submit" 
@@ -190,7 +312,7 @@ const TaskEditForm = () => {
             </button>
             <button 
               type="button" 
-              className="btn-outline"
+              className="btn-secondary"
               onClick={() => navigate(`/tasks/${id}/details`)}
               disabled={submitting}
             >

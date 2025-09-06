@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
-const CreateUser = () => {
+const EditUser = () => {
   const navigate = useNavigate();
+  const { userId } = useParams();
   const [formData, setFormData] = useState({
     username: '',
     name: '',
     email: '',
-    password: '',
-    confirmPassword: '',
     designation: '',
     specialization: '',
     bio: '',
@@ -17,12 +16,50 @@ const CreateUser = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [fetchingUser, setFetchingUser] = useState(true);
 
   const roles = [
     { value: 'ROLE_USER', label: 'User' },
     { value: 'ROLE_MANAGER', label: 'Manager' },
     { value: 'ROLE_ADMIN', label: 'Admin' }
   ];
+
+  useEffect(() => {
+    fetchUserData();
+  }, [userId]);
+
+  const fetchUserData = async () => {
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          const user = data.user;
+          setFormData({
+            username: user.username || '',
+            name: user.name || '',
+            email: user.email || '',
+            designation: user.designation || '',
+            specialization: user.specialization || '',
+            bio: user.bio || '',
+            role: user.roles && user.roles.length > 0 ? user.roles[0] : 'ROLE_USER'
+          });
+        } else {
+          setError(data.error || 'Failed to fetch user data');
+        }
+      } else {
+        setError('Failed to fetch user data');
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      setError('Failed to fetch user data');
+    } finally {
+      setFetchingUser(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -36,31 +73,18 @@ const CreateUser = () => {
     setError('');
     setSuccess('');
 
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const response = await fetch('/api/admin/users/create', {
-        method: 'POST',
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
         body: JSON.stringify({
-          username: formData.username,
           name: formData.name,
           email: formData.email,
-          password: formData.password,
           designation: formData.designation,
           specialization: formData.specialization,
           bio: formData.bio,
@@ -68,41 +92,45 @@ const CreateUser = () => {
         })
       });
 
-      if (response.ok) {
-        setSuccess('User created successfully!');
-        setFormData({
-          username: '',
-          name: '',
-          email: '',
-          password: '',
-          confirmPassword: '',
-          designation: '',
-          specialization: '',
-          bio: '',
-          role: 'ROLE_USER'
-        });
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSuccess('User updated successfully!');
+        setTimeout(() => {
+          navigate('/admin/users');
+        }, 2000);
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to create user');
+        setError(data.error || 'Failed to update user');
       }
     } catch (error) {
-      console.error('Error creating user:', error);
-      setError('Failed to create user');
+      console.error('Error updating user:', error);
+      setError('Failed to update user');
     } finally {
       setLoading(false);
     }
   };
 
+  if (fetchingUser) {
+    return (
+      <div className="main-content">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading user data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="main-content">
       <div className="page-header">
-        <h1 className="page-title">Create New User</h1>
+        <h1 className="page-title">Edit User</h1>
         <div className="page-actions">
           <button 
-            onClick={() => navigate('/admin/dashboard')} 
+            onClick={() => navigate('/admin/users')} 
             className="btn-outline"
           >
-            Back to Admin Dashboard
+            Back to Users List
           </button>
         </div>
       </div>
@@ -123,16 +151,17 @@ const CreateUser = () => {
         <form onSubmit={handleSubmit}>
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="username">Username *:</label>
+              <label htmlFor="username">Username:</label>
               <input
                 type="text"
                 id="username"
                 name="username"
                 value={formData.username}
-                onChange={handleChange}
-                required
-                placeholder="Enter username"
+                disabled
+                className="form-input disabled"
+                placeholder="Username (cannot be changed)"
               />
+              <small className="form-help">Username cannot be changed after creation</small>
             </div>
 
             <div className="form-group">
@@ -164,33 +193,24 @@ const CreateUser = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="password">Password *:</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
+              <label htmlFor="role">Role *:</label>
+              <select
+                id="role"
+                name="role"
+                value={formData.role}
                 onChange={handleChange}
                 required
-                placeholder="Enter password"
-              />
+              >
+                {roles.map(role => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
           <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password *:</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-                placeholder="Confirm password"
-              />
-            </div>
-
             <div className="form-group">
               <label htmlFor="designation">Designation:</label>
               <input
@@ -202,9 +222,7 @@ const CreateUser = () => {
                 placeholder="Enter designation"
               />
             </div>
-          </div>
 
-          <div className="form-row">
             <div className="form-group">
               <label htmlFor="specialization">Specialization:</label>
               <input
@@ -216,23 +234,6 @@ const CreateUser = () => {
                 placeholder="Enter specialization"
               />
             </div>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="role">Role *:</label>
-            <select
-              id="role"
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              required
-            >
-              {roles.map(role => (
-                <option key={role.value} value={role.value}>
-                  {role.label}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div className="form-group">
@@ -253,12 +254,12 @@ const CreateUser = () => {
               className="btn-primary"
               disabled={loading}
             >
-              {loading ? 'Creating...' : 'Create User'}
+              {loading ? 'Updating...' : 'Update User'}
             </button>
             <button 
               type="button" 
               className="btn-outline"
-              onClick={() => navigate('/admin/dashboard')}
+              onClick={() => navigate('/admin/users')}
               disabled={loading}
             >
               Cancel
@@ -270,4 +271,4 @@ const CreateUser = () => {
   );
 };
 
-export default CreateUser;
+export default EditUser;

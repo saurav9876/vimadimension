@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.example.models.enums.TaskStatus;
 import org.example.models.enums.ProjectStage;
+import org.example.models.enums.TaskPriority;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,12 +28,19 @@ public class Task {
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private TaskStatus status;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "project_stage", nullable = false)
     private ProjectStage projectStage;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "priority")
+    private TaskPriority priority;
+
+    @Column(name = "due_date")
+    private LocalDate dueDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
@@ -48,6 +57,11 @@ public class Task {
     @JsonIgnore // Prevent Hibernate proxy serialization issues
     private User assignee; // The user to whom the task is assigned
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "checked_by_id") // Can be null if no checker is assigned
+    @JsonIgnore // Prevent Hibernate proxy serialization issues
+    private User checkedBy; // The user responsible for verifying task completion
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -60,6 +74,7 @@ public class Task {
     // Constructors
     public Task() {
         this.status = TaskStatus.TO_DO; // Default status
+        this.priority = TaskPriority.MEDIUM; // Default priority
     }
 
     // Getters and Setters
@@ -103,6 +118,22 @@ public class Task {
         this.projectStage = projectStage;
     }
 
+    public TaskPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(TaskPriority priority) {
+        this.priority = priority;
+    }
+
+    public LocalDate getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(LocalDate dueDate) {
+        this.dueDate = dueDate;
+    }
+
     public Project getProject() {
         return project;
     }
@@ -125,6 +156,14 @@ public class Task {
 
     public void setAssignee(User assignee) {
         this.assignee = assignee;
+    }
+
+    public User getCheckedBy() {
+        return checkedBy;
+    }
+
+    public void setCheckedBy(User checkedBy) {
+        this.checkedBy = checkedBy;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -196,6 +235,7 @@ public class Task {
                 ", projectId=" + (project != null ? project.getId() : null) +
                 ", reporterId=" + (reporter != null ? reporter.getId() : null) +
                 ", assigneeId=" + (assignee != null ? assignee.getId() : null) +
+                ", checkedById=" + (checkedBy != null ? checkedBy.getId() : null) +
                 '}';
     }
 }

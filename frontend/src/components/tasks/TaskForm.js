@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
 const TaskForm = () => {
@@ -6,10 +6,16 @@ const TaskForm = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    projectStage: ''
+    projectStage: '',
+    priority: 'MEDIUM',
+    dueDate: '',
+    assigneeId: '',
+    checkedById: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [fetchingUsers, setFetchingUsers] = useState(true);
   const navigate = useNavigate();
 
   const projectStages = [
@@ -21,6 +27,36 @@ const TaskForm = () => {
     { value: 'STAGE_06_HANDOVER', label: 'Stage 06: Handover' },
     { value: 'STAGE_07_USE', label: 'Stage 07: Use' }
   ];
+
+  const taskPriorities = [
+    { value: 'LOW', label: 'Low', cssClass: 'priority-low' },
+    { value: 'MEDIUM', label: 'Medium', cssClass: 'priority-medium' },
+    { value: 'HIGH', label: 'High', cssClass: 'priority-high' },
+    { value: 'URGENT', label: 'Urgent', cssClass: 'priority-urgent' }
+  ];
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/admin/users', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.users) {
+          setUsers(data.users);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setFetchingUsers(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -43,7 +79,11 @@ const TaskForm = () => {
         body: new URLSearchParams({
           'name': formData.name,
           'description': formData.description,
-          'projectStage': formData.projectStage
+          'projectStage': formData.projectStage,
+          'priority': formData.priority,
+          'dueDate': formData.dueDate,
+          'assigneeId': formData.assigneeId,
+          'checkedById': formData.checkedById
         }),
         credentials: 'include'
       });
@@ -76,7 +116,7 @@ const TaskForm = () => {
       <div className="project-card">
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="name">Task Name:</label>
+            <label htmlFor="name">Task Name *:</label>
             <input
               type="text"
               id="name"
@@ -85,36 +125,109 @@ const TaskForm = () => {
               onChange={handleChange}
               required
               autoFocus
+              placeholder="Enter task name"
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="description">Description:</label>
+            <label htmlFor="description">Acceptance Criteria:</label>
             <textarea
               id="description"
               name="description"
               value={formData.description}
               onChange={handleChange}
               rows="4"
+              placeholder="This task will be done when the following acceptance criteria is completed..."
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="projectStage">Project Stage *:</label>
-            <select
-              id="projectStage"
-              name="projectStage"
-              value={formData.projectStage}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select stage</option>
-              {projectStages.map(stage => (
-                <option key={stage.value} value={stage.value}>
-                  {stage.label}
-                </option>
-              ))}
-            </select>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="projectStage">Project Stage *:</label>
+              <select
+                id="projectStage"
+                name="projectStage"
+                value={formData.projectStage}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select stage</option>
+                {projectStages.map(stage => (
+                  <option key={stage.value} value={stage.value}>
+                    {stage.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="priority">Priority:</label>
+              <select
+                id="priority"
+                name="priority"
+                value={formData.priority}
+                onChange={handleChange}
+              >
+                {taskPriorities.map(priority => (
+                  <option key={priority.value} value={priority.value}>
+                    {priority.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="dueDate">Due Date:</label>
+              <input
+                type="date"
+                id="dueDate"
+                name="dueDate"
+                value={formData.dueDate}
+                onChange={handleChange}
+                placeholder="Select due date (optional)"
+              />
+              <small className="form-help">Optional due date for the task</small>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="assigneeId">Assign To:</label>
+              <select
+                id="assigneeId"
+                name="assigneeId"
+                value={formData.assigneeId}
+                onChange={handleChange}
+              >
+                <option value="">Unassigned</option>
+                {!fetchingUsers && users.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name || user.username}
+                  </option>
+                ))}
+              </select>
+              <small className="form-help">Optional: assign task to a team member</small>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="checkedById">Checked By:</label>
+              <select
+                id="checkedById"
+                name="checkedById"
+                value={formData.checkedById}
+                onChange={handleChange}
+              >
+                <option value="">No checker assigned</option>
+                {!fetchingUsers && users.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name || user.username}
+                  </option>
+                ))}
+              </select>
+              <small className="form-help">Optional: assign a checker to verify task completion</small>
+            </div>
           </div>
 
           <div className="project-actions">

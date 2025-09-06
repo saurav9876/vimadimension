@@ -3,10 +3,11 @@ package org.example.dto;
 import org.example.models.enums.ProjectCategory;
 import org.example.models.enums.ProjectStatus;
 import org.example.models.enums.ProjectStage;
+import org.example.models.enums.ProjectPriority;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class ProjectCreateDto {
-
     private String name;
     private String clientName;
     private LocalDate startDate;
@@ -16,8 +17,62 @@ public class ProjectCreateDto {
     private ProjectStatus status;
     private ProjectStage projectStage;
     private String description;
+    
+    // --- NEW CRITICAL FIELDS ---
+    private BigDecimal budget;
+    private BigDecimal actualCost;
+    private ProjectPriority priority;
 
-    // Getters and Setters
+    // Constructors
+    public ProjectCreateDto() {
+    }
+
+    public ProjectCreateDto(String name, String clientName, LocalDate startDate, LocalDate estimatedEndDate, 
+                          String location, ProjectCategory projectCategory, ProjectStatus status, 
+                          ProjectStage projectStage, String description, BigDecimal budget, 
+                          BigDecimal actualCost, ProjectPriority priority) {
+        this.name = name;
+        this.clientName = clientName;
+        this.startDate = startDate;
+        this.estimatedEndDate = estimatedEndDate;
+        this.location = location;
+        this.projectCategory = projectCategory;
+        this.status = status;
+        this.projectStage = projectStage;
+        this.description = description;
+        this.budget = budget;
+        this.actualCost = actualCost;
+        this.priority = priority;
+    }
+
+    // --- NEW GETTERS AND SETTERS FOR CRITICAL FIELDS ---
+    
+    public BigDecimal getBudget() {
+        return budget;
+    }
+
+    public void setBudget(BigDecimal budget) {
+        this.budget = budget;
+    }
+
+    public BigDecimal getActualCost() {
+        return actualCost;
+    }
+
+    public void setActualCost(BigDecimal actualCost) {
+        this.actualCost = actualCost;
+    }
+
+    public ProjectPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(ProjectPriority priority) {
+        this.priority = priority;
+    }
+
+    // --- EXISTING GETTERS AND SETTERS ---
+    
     public String getName() {
         return name;
     }

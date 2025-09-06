@@ -6,7 +6,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.example.models.enums.ProjectCategory;
 import org.example.models.enums.ProjectStatus;
 import org.example.models.enums.ProjectStage;
+import org.example.models.enums.ProjectPriority;
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -48,6 +51,24 @@ public class Project {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    // --- NEW CRITICAL FIELDS ---
+    
+    @Column(precision = 15, scale = 2)
+    private BigDecimal budget; // Project budget in currency units
+    
+    @Column(name = "actual_cost", precision = 15, scale = 2)
+    private BigDecimal actualCost; // Actual cost incurred so far
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ProjectPriority priority = ProjectPriority.MEDIUM; // Default priority
+    
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+    
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     // Organization relationship - projects must belong to an organization
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id", nullable = false)
@@ -62,6 +83,66 @@ public class Project {
     // Constructors, Getters, and Setters
 
     public Project() {
+    }
+
+    // --- NEW GETTERS AND SETTERS FOR CRITICAL FIELDS ---
+    
+    public BigDecimal getBudget() {
+        return budget;
+    }
+
+    public void setBudget(BigDecimal budget) {
+        this.budget = budget;
+    }
+
+    public BigDecimal getActualCost() {
+        return actualCost;
+    }
+
+    public void setActualCost(BigDecimal actualCost) {
+        this.actualCost = actualCost;
+    }
+
+    public ProjectPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(ProjectPriority priority) {
+        this.priority = priority;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    // --- LIFECYCLE METHODS ---
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+
+    // --- Get organization ID without triggering lazy loading ---
+    public Long getOrganizationId() {
+        return organization != null ? organization.getId() : null;
     }
 
     // --- Getter and Setter for accessibleByUsers ---
@@ -160,10 +241,5 @@ public class Project {
 
     public void setOrganization(Organization organization) {
         this.organization = organization;
-    }
-    
-    // Get organization ID without triggering lazy loading
-    public Long getOrganizationId() {
-        return organization != null ? organization.getId() : null;
     }
 }
