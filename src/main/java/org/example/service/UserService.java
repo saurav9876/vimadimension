@@ -1,8 +1,10 @@
 package org.example.service;
 
 import org.example.dto.UserRegistrationDto;
+import org.example.models.AttendanceEntry;
 import org.example.models.Role; // Import the Role entity
 import org.example.models.User;
+import org.example.repository.AttendanceEntryRepository;
 import org.example.repository.RoleRepository; // Import RoleRepository
 import org.example.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,8 +13,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -22,14 +28,17 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository; // Inject RoleRepository
+    private final AttendanceEntryRepository attendanceEntryRepository;
 
     @Autowired
     public UserService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
-                       RoleRepository roleRepository) { // Add RoleRepository to constructor
+                       RoleRepository roleRepository,
+                       AttendanceEntryRepository attendanceEntryRepository) { // Add AttendanceEntryRepository to constructor
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.roleRepository = roleRepository;
+        this.attendanceEntryRepository = attendanceEntryRepository;
     }
 
     /**
@@ -74,6 +83,17 @@ public class UserService {
         newUser.setEmail(email);
         newUser.setPassword(passwordEncoder.encode(userDto.getPassword()));
         newUser.setEnabled(true);
+        
+        // Set additional profile fields
+        if (userDto.getDesignation() != null && !userDto.getDesignation().trim().isEmpty()) {
+            newUser.setDesignation(userDto.getDesignation().trim());
+        }
+        if (userDto.getSpecialization() != null && !userDto.getSpecialization().trim().isEmpty()) {
+            newUser.setSpecialization(userDto.getSpecialization().trim());
+        }
+        if (userDto.getBio() != null && !userDto.getBio().trim().isEmpty()) {
+            newUser.setBio(userDto.getBio().trim());
+        }
 
         // Set the specified role
         Set<Role> userRoles = new HashSet<>();
@@ -297,11 +317,12 @@ public class UserService {
      * @param userId The ID of the user whose profile to update
      * @param name The new full name
      * @param email The new email address
+     * @param bio The new bio
      * @return The updated User object
      * @throws IllegalArgumentException if user not found or email is already taken
      */
     @Transactional
-    public User updateUserProfile(Long userId, String name, String email) throws IllegalArgumentException {
+    public User updateUserProfile(Long userId, String name, String email, String bio) throws IllegalArgumentException {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Name cannot be empty.");
         }
@@ -321,7 +342,109 @@ public class UserService {
 
         user.setName(name.trim());
         user.setEmail(trimmedEmail);
+        user.setBio(bio != null ? bio.trim() : null);
         return userRepository.save(user);
+    }
+
+    /**
+     * Saves a user entity
+     *
+     * @param user The user to save
+     * @return The saved User object
+     */
+    @Transactional
+    public User save(User user) {
+        return userRepository.save(user);
+    }
+
+    /**
+     * Gets user attendance data for a specific month
+     *
+     * @param userId The ID of the user
+     * @param year The year
+     * @param month The month (1-12)
+     * @return Map of date strings to attendance status
+     */
+    public Map<String, String> getUserAttendanceForMonth(Long userId, int year, int month) {
+        // Create date range for the month
+        LocalDate startDate = LocalDate.of(year, month, 1);
+        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+        
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+        
+        // Get all attendance entries for the user in the specified month
+        List<AttendanceEntry> entries = attendanceEntryRepository
+                .findByUserIdAndTimestampBetweenOrderByTimestampDesc(userId, startDateTime, endDateTime);
+        
+        Map<String, String> attendanceMap = new HashMap<>();
+        
+        // Process each day in the month
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            String dateStr = date.toString(); // Format: YYYY-MM-DD
+            
+            // Get entries for this specific date
+            List<AttendanceEntry> dayEntries = attendanceEntryRepository.findByUserIdAndDate(userId, date);
+            
+            // Check if this is a working day (Monday-Saturday)
+            int dayOfWeek = date.getDayOfWeek().getValue(); // 1=Monday, 7=Sunday
+            boolean isWorkingDay = dayOfWeek >= 1 && dayOfWeek <= 6; // Monday to Saturday
+            
+            // Check if this date is in the past (before today)
+            LocalDate today = LocalDate.now();
+            boolean isPastDate = date.isBefore(today);
+            
+            if (dayEntries.isEmpty()) {
+                // No entries for this date
+                if (isWorkingDay && isPastDate) {
+                    // For past working days with no data, consider as absent
+                    attendanceMap.put(dateStr, "absent");
+                } else {
+                    // For future working days or non-working days, mark as no-data
+                    attendanceMap.put(dateStr, "no-data");
+                }
+            } else {
+                // Determine if user was present (has both clock-in and clock-out)
+                boolean hasClockIn = dayEntries.stream()
+                        .anyMatch(entry -> entry.getEntryType() == AttendanceEntry.EntryType.CLOCK_IN);
+                boolean hasClockOut = dayEntries.stream()
+                        .anyMatch(entry -> entry.getEntryType() == AttendanceEntry.EntryType.CLOCK_OUT);
+                
+                if (hasClockIn && hasClockOut) {
+                    attendanceMap.put(dateStr, "present");
+                } else if (hasClockIn) {
+                    // Only clock-in, might be present but forgot to clock out
+                    attendanceMap.put(dateStr, "present");
+                } else {
+                    // Only clock-out or other cases
+                    attendanceMap.put(dateStr, "absent");
+                }
+            }
+        }
+        
+        return attendanceMap;
+    }
+
+    /**
+     * Updates a user's role
+     *
+     * @param userId The ID of the user whose role to update
+     * @param roleName The new role name
+     * @throws IllegalArgumentException if user not found or role not found
+     */
+    @Transactional
+    public void updateUserRole(Long userId, String roleName) throws IllegalArgumentException {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+
+        Role role = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new IllegalArgumentException("Role not found: " + roleName));
+
+        // Clear existing roles and set the new role
+        user.getRoles().clear();
+        user.getRoles().add(role);
+        
+        userRepository.save(user);
     }
 
     // Optional: Custom exception for role not found

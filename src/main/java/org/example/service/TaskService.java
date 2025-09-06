@@ -4,6 +4,7 @@ import org.example.models.Project;
 import org.example.models.Task;
 import org.example.models.enums.TaskStatus;
 import org.example.models.enums.ProjectStage;
+import org.example.models.enums.TaskPriority;
 import org.example.models.User;
 import org.example.repository.ProjectRepository;
 import org.example.repository.TaskRepository;
@@ -16,6 +17,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -60,7 +62,7 @@ public class TaskService {
     }
 
     @Transactional
-    public Task createTask(String name, String description, ProjectStage projectStage, Long projectId, Optional<Long> assigneeIdOpt) {
+    public Task createTask(String name, String description, ProjectStage projectStage, Long projectId, Optional<Long> assigneeIdOpt, Optional<Long> checkedByIdOpt) {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Task name cannot be empty.");
         }
@@ -78,6 +80,12 @@ public class TaskService {
                     .orElseThrow(() -> new IllegalArgumentException("Assignee user with ID " + assigneeIdOpt.get() + " not found."));
         }
 
+        User checkedBy = null;
+        if (checkedByIdOpt.isPresent()) {
+            checkedBy = userRepository.findById(checkedByIdOpt.get())
+                    .orElseThrow(() -> new IllegalArgumentException("Checker user with ID " + checkedByIdOpt.get() + " not found."));
+        }
+
         Task newTask = new Task();
         newTask.setName(name.trim());
         newTask.setDescription(description != null ? description.trim() : null);
@@ -85,6 +93,7 @@ public class TaskService {
         newTask.setProject(project);
         newTask.setReporter(reporter);
         newTask.setAssignee(assignee);
+        newTask.setCheckedBy(checkedBy);
         newTask.setStatus(TaskStatus.TO_DO); // Default status
         // createdAt and updatedAt are handled by @PrePersist in Task entity
 
@@ -136,6 +145,11 @@ public class TaskService {
     public List<Task> getTasksReportedByCurrentUser() {
         User currentUser = getCurrentAuthenticatedUser();
         return taskRepository.findByReporter(currentUser);
+    }
+
+    public List<Task> getTasksToCheckByCurrentUser() {
+        User currentUser = getCurrentAuthenticatedUser();
+        return taskRepository.findByCheckedBy(currentUser);
     }
 
 
@@ -238,6 +252,84 @@ public class TaskService {
         taskToUpdate.setDescription(description != null ? description.trim() : null);
         taskToUpdate.setProjectStage(projectStageEnum);
         taskToUpdate.setStatus(statusEnum);
+
+        // updatedAt is handled by @PreUpdate in Task entity
+        return taskRepository.save(taskToUpdate);
+    }
+
+    @Transactional
+    public Task updateTaskComplete(Long taskId, String name, String description, String projectStage, 
+                                  String status, String priority, String dueDate, Long assigneeId, Long checkedById) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Task name cannot be empty.");
+        }
+        if (projectStage == null || projectStage.trim().isEmpty()) {
+            throw new IllegalArgumentException("Project stage cannot be empty.");
+        }
+        if (status == null || status.trim().isEmpty()) {
+            throw new IllegalArgumentException("Task status cannot be empty.");
+        }
+
+        Task taskToUpdate = taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("Task with ID " + taskId + " not found."));
+
+        // Parse enums
+        ProjectStage projectStageEnum;
+        try {
+            projectStageEnum = ProjectStage.valueOf(projectStage);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid project stage: " + projectStage);
+        }
+
+        TaskStatus statusEnum;
+        try {
+            statusEnum = TaskStatus.valueOf(status);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid task status: " + status);
+        }
+
+        TaskPriority priorityEnum;
+        try {
+            priorityEnum = TaskPriority.valueOf(priority);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid task priority: " + priority);
+        }
+
+        // Update fields
+        taskToUpdate.setName(name.trim());
+        taskToUpdate.setDescription(description != null ? description.trim() : null);
+        taskToUpdate.setProjectStage(projectStageEnum);
+        taskToUpdate.setStatus(statusEnum);
+        taskToUpdate.setPriority(priorityEnum);
+
+        // Handle due date
+        if (dueDate != null && !dueDate.trim().isEmpty()) {
+            try {
+                taskToUpdate.setDueDate(LocalDate.parse(dueDate.trim()));
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Invalid due date format: " + dueDate);
+            }
+        } else {
+            taskToUpdate.setDueDate(null);
+        }
+
+        // Handle assignee
+        if (assigneeId != null) {
+            User assignee = userRepository.findById(assigneeId)
+                    .orElseThrow(() -> new IllegalArgumentException("User with ID " + assigneeId + " not found."));
+            taskToUpdate.setAssignee(assignee);
+        } else {
+            taskToUpdate.setAssignee(null);
+        }
+
+        // Handle checked by
+        if (checkedById != null) {
+            User checkedBy = userRepository.findById(checkedById)
+                    .orElseThrow(() -> new IllegalArgumentException("User with ID " + checkedById + " not found."));
+            taskToUpdate.setCheckedBy(checkedBy);
+        } else {
+            taskToUpdate.setCheckedBy(null);
+        }
 
         // updatedAt is handled by @PreUpdate in Task entity
         return taskRepository.save(taskToUpdate);

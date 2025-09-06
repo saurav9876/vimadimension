@@ -24,6 +24,19 @@ const TimeLogForm = () => {
     setError('');
     setLoading(true);
 
+    // Basic validation
+    if (!formData.hoursWorked || formData.hoursWorked <= 0) {
+      setError('Please enter a valid number of hours worked');
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.description.trim()) {
+      setError('Please provide a description of work done');
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch(`/api/tasks/${id}/timelogs`, {
         method: 'POST',
@@ -32,22 +45,23 @@ const TimeLogForm = () => {
         },
         body: new URLSearchParams({
           'hoursWorked': formData.hoursWorked,
-          'description': formData.description,
+          'description': formData.description.trim(),
           'dateLogged': formData.dateLogged
         }),
         credentials: 'include'
       });
 
-      if (response.ok) {
+      const data = await response.json();
+
+      if (response.ok && data.success) {
         navigate(`/tasks/${id}/details`);
       } else {
-        const errorData = await response.json();
-        console.error('Time log creation failed:', errorData);
-        setError(errorData.error || 'Failed to log time');
+        console.error('Time log creation failed:', data);
+        setError(data.error || 'Failed to log time');
       }
     } catch (error) {
       console.error('Error logging time:', error);
-      setError('Failed to log time');
+      setError('Failed to log time. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -74,10 +88,13 @@ const TimeLogForm = () => {
               value={formData.hoursWorked}
               onChange={handleChange}
               step="0.25"
-              min="0"
+              min="0.25"
+              max="24"
               required
               autoFocus
+              placeholder="e.g., 2.5"
             />
+            <div className="form-help">Enter hours in decimal format (e.g., 2.5 for 2 hours 30 minutes)</div>
           </div>
 
           <div className="form-group">
@@ -90,7 +107,9 @@ const TimeLogForm = () => {
               rows="4"
               placeholder="Describe what you worked on..."
               required
+              maxLength="500"
             />
+            <div className="form-help">Describe the specific tasks or activities you completed</div>
           </div>
 
           <div className="form-group">
@@ -102,7 +121,9 @@ const TimeLogForm = () => {
               value={formData.dateLogged}
               onChange={handleChange}
               required
+              max={new Date().toISOString().split('T')[0]}
             />
+            <div className="form-help">Select the date when this work was completed</div>
           </div>
 
           <div className="project-actions">
@@ -111,7 +132,17 @@ const TimeLogForm = () => {
               className="btn-primary"
               disabled={loading}
             >
-              {loading ? 'Logging...' : 'Log Time'}
+              {loading ? (
+                <>
+                  <span className="loading-spinner"></span>
+                  Logging Time...
+                </>
+              ) : (
+                <>
+                  <span>⏱️</span>
+                  Log Time
+                </>
+              )}
             </button>
             <button 
               type="button" 

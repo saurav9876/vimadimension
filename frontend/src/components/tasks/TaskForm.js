@@ -9,7 +9,8 @@ const TaskForm = () => {
     projectStage: '',
     priority: 'MEDIUM',
     dueDate: '',
-    assigneeId: ''
+    assigneeId: '',
+    checkedById: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -81,7 +82,8 @@ const TaskForm = () => {
           'projectStage': formData.projectStage,
           'priority': formData.priority,
           'dueDate': formData.dueDate,
-          'assigneeId': formData.assigneeId
+          'assigneeId': formData.assigneeId,
+          'checkedById': formData.checkedById
         }),
         credentials: 'include'
       });
@@ -128,14 +130,14 @@ const TaskForm = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="description">Description:</label>
+            <label htmlFor="description">Acceptance Criteria:</label>
             <textarea
               id="description"
               name="description"
               value={formData.description}
               onChange={handleChange}
               rows="4"
-              placeholder="Enter task description (optional)"
+              placeholder="This task will be done when the following acceptance criteria is completed..."
             />
           </div>
 
@@ -205,6 +207,26 @@ const TaskForm = () => {
                 ))}
               </select>
               <small className="form-help">Optional: assign task to a team member</small>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="checkedById">Checked By:</label>
+              <select
+                id="checkedById"
+                name="checkedById"
+                value={formData.checkedById}
+                onChange={handleChange}
+              >
+                <option value="">No checker assigned</option>
+                {!fetchingUsers && users.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name || user.username}
+                  </option>
+                ))}
+              </select>
+              <small className="form-help">Optional: assign a checker to verify task completion</small>
             </div>
           </div>
 

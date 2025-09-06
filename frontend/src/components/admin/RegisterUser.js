@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { validateRegistrationForm, getFieldValidation } from '../../utils/validation';
 
 const RegisterUser = () => {
   const [formData, setFormData] = useState({
@@ -8,8 +9,12 @@ const RegisterUser = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    designation: '',
+    specialization: '',
+    bio: '',
     role: 'ROLE_USER'
   });
+  const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,45 +56,66 @@ const RegisterUser = () => {
   };
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Trim whitespace for username and email fields
+    const trimmedValue = (name === 'username' || name === 'email') ? value.trim() : value;
+    
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: trimmedValue
     });
+    
+    // Real-time validation
+    const validation = getFieldValidation(name, trimmedValue, formData);
+    if (!validation.isValid) {
+      setFieldErrors({
+        ...fieldErrors,
+        [name]: validation.message
+      });
+    } else {
+      setFieldErrors({
+        ...fieldErrors,
+        [name]: ''
+      });
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setFieldErrors({});
 
-    // Basic validation
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    // Comprehensive validation
+    const validation = validateRegistrationForm(formData);
+    
+    if (!validation.isValid) {
+      setFieldErrors(validation.errors);
+      setError('Please fix the validation errors below');
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await fetch('/api/registration/register', {
+      const response = await fetch('/api/admin/users/create', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
-        body: new URLSearchParams({
-          'name': formData.name,
-          'username': formData.username,
-          'email': formData.email,
-          'password': formData.password,
-          'confirmPassword': formData.confirmPassword,
-          'role': formData.role
-        }),
-        credentials: 'include'
+        credentials: 'include',
+        body: JSON.stringify({
+          name: validation.validatedData.name,
+          username: validation.validatedData.username,
+          email: validation.validatedData.email,
+          password: validation.validatedData.password,
+          confirmPassword: validation.validatedData.confirmPassword,
+          designation: formData.designation,
+          specialization: formData.specialization,
+          bio: formData.bio,
+          role: formData.role
+        })
       });
 
       const data = await response.json();
@@ -103,8 +129,12 @@ const RegisterUser = () => {
           email: '',
           password: '',
           confirmPassword: '',
+          designation: '',
+          specialization: '',
+          bio: '',
           role: 'ROLE_USER'
         });
+        setFieldErrors({});
       } else {
         setError(data.error || 'Registration failed');
       }
@@ -191,7 +221,7 @@ const RegisterUser = () => {
                 </label>
                 <input
                   type="text"
-                  className="form-input"
+                  className={`form-input ${fieldErrors.username ? 'error' : ''}`}
                   id="username"
                   name="username"
                   value={formData.username}
@@ -199,8 +229,15 @@ const RegisterUser = () => {
                   required
                   autoFocus
                   minLength="3"
-                  placeholder="Enter username"
+                  maxLength="20"
+                  placeholder="Enter username (3-20 characters, letters, numbers, underscores only)"
                 />
+                {fieldErrors.username && (
+                  <div className="form-error">{fieldErrors.username}</div>
+                )}
+                <div className="form-help">
+                  Username can only contain letters, numbers, and underscores. Cannot start or end with underscore.
+                </div>
               </div>
 
               <div className="form-group">
@@ -209,14 +246,18 @@ const RegisterUser = () => {
                 </label>
                 <input
                   type="text"
-                  className="form-input"
+                  className={`form-input ${fieldErrors.name ? 'error' : ''}`}
                   id="name"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
                   required
+                  maxLength="50"
                   placeholder="Enter full name"
                 />
+                {fieldErrors.name && (
+                  <div className="form-error">{fieldErrors.name}</div>
+                )}
               </div>
             </div>
 
@@ -226,14 +267,18 @@ const RegisterUser = () => {
               </label>
               <input
                 type="email"
-                className="form-input"
+                className={`form-input ${fieldErrors.email ? 'error' : ''}`}
                 id="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
                 required
+                maxLength="254"
                 placeholder="Enter email address"
               />
+              {fieldErrors.email && (
+                <div className="form-error">{fieldErrors.email}</div>
+              )}
             </div>
           </div>
 
@@ -250,16 +295,22 @@ const RegisterUser = () => {
                 </label>
                 <input
                   type="password"
-                  className="form-input"
+                  className={`form-input ${fieldErrors.password ? 'error' : ''}`}
                   id="password"
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  minLength="6"
-                  placeholder="Enter password (min 6 characters)"
+                  minLength="8"
+                  maxLength="128"
+                  placeholder="Enter password (8+ characters with uppercase, lowercase, number, special char)"
                 />
-                <small className="form-help">Minimum 6 characters</small>
+                {fieldErrors.password && (
+                  <div className="form-error">{fieldErrors.password}</div>
+                )}
+                <div className="form-help">
+                  Must contain: 8+ characters, uppercase letter, lowercase letter, number, and special character
+                </div>
               </div>
 
               <div className="form-group">
@@ -268,15 +319,19 @@ const RegisterUser = () => {
                 </label>
                 <input
                   type="password"
-                  className="form-input"
+                  className={`form-input ${fieldErrors.confirmPassword ? 'error' : ''}`}
                   id="confirmPassword"
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   required
-                  minLength="6"
+                  minLength="8"
+                  maxLength="128"
                   placeholder="Confirm password"
                 />
+                {fieldErrors.confirmPassword && (
+                  <div className="form-error">{fieldErrors.confirmPassword}</div>
+                )}
               </div>
             </div>
 
@@ -301,6 +356,72 @@ const RegisterUser = () => {
                 {formData.role === 'ROLE_MANAGER' && 'Manager with project oversight'}
                 {formData.role === 'ROLE_ADMIN' && 'Administrator with full system access'}
               </small>
+            </div>
+          </div>
+
+          <div className="form-section">
+            <div className="section-title">
+              <div className="section-icon">👔</div>
+              <h3>Professional Information</h3>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="designation" className="form-label">
+                  Designation
+                </label>
+                <input
+                  type="text"
+                  className="form-input"
+                  id="designation"
+                  name="designation"
+                  value={formData.designation}
+                  onChange={handleChange}
+                  maxLength="100"
+                  placeholder="e.g., Principal Architect, Project Architect, Draftsperson"
+                />
+                <div className="form-help">
+                  Professional title or position within the organization
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="specialization" className="form-label">
+                  Specialization
+                </label>
+                <input
+                  type="text"
+                  className="form-input"
+                  id="specialization"
+                  name="specialization"
+                  value={formData.specialization}
+                  onChange={handleChange}
+                  maxLength="100"
+                  placeholder="e.g., Sustainable Design, Urban Planning, Interior Architecture"
+                />
+                <div className="form-help">
+                  Area of expertise or specialization
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="bio" className="form-label">
+                Bio
+              </label>
+              <textarea
+                className="form-input"
+                id="bio"
+                name="bio"
+                value={formData.bio}
+                onChange={handleChange}
+                rows="4"
+                maxLength="500"
+                placeholder="Brief professional biography (optional)"
+              />
+              <div className="form-help">
+                A short professional biography or description
+              </div>
             </div>
           </div>
 

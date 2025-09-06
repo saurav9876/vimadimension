@@ -6,10 +6,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.example.dto.UserRegistrationDto;
 import org.example.models.User;
+import org.example.models.Role;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -166,6 +170,166 @@ public class AdminController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "success", false,
                 "error", "Failed to change password"
+            ));
+        }
+    }
+
+    // Get a single user by ID
+    @GetMapping("/users/{userId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<?> getUser(@PathVariable Long userId, Authentication authentication) {
+        try {
+            // Get the current admin user to verify they can access this user
+            String adminUsername = authentication.getName();
+            User adminUser = userService.findByUsername(adminUsername)
+                    .orElseThrow(() -> new IllegalArgumentException("Admin user not found"));
+            
+            User user = userService.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            
+            // Check if the user belongs to the same organization as the admin
+            if (adminUser.getOrganization() == null || 
+                user.getOrganization() == null || 
+                !adminUser.getOrganization().getId().equals(user.getOrganization().getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "success", false,
+                    "error", "Access denied"
+                ));
+            }
+            
+            Map<String, Object> userData = Map.of(
+                "id", user.getId(),
+                "username", user.getUsername(),
+                "name", user.getName() != null ? user.getName() : user.getUsername(),
+                "email", user.getEmail(),
+                "designation", user.getDesignation() != null ? user.getDesignation() : "",
+                "specialization", user.getSpecialization() != null ? user.getSpecialization() : "",
+                "bio", user.getBio() != null ? user.getBio() : "",
+                "enabled", user.isEnabled(),
+                "roles", user.getRoles().stream().map(Role::getName).collect(java.util.stream.Collectors.toList())
+            );
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "user", userData
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        } catch (Exception e) {
+            logger.error("Error fetching user {}: {}", userId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "error", "Failed to fetch user"
+            ));
+        }
+    }
+
+    // Update a user
+    @PutMapping("/users/{userId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<?> updateUser(@PathVariable Long userId, @RequestBody Map<String, Object> userData, Authentication authentication) {
+        try {
+            // Get the current admin user to verify they can access this user
+            String adminUsername = authentication.getName();
+            User adminUser = userService.findByUsername(adminUsername)
+                    .orElseThrow(() -> new IllegalArgumentException("Admin user not found"));
+            
+            User user = userService.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            
+            // Check if the user belongs to the same organization as the admin
+            if (adminUser.getOrganization() == null || 
+                user.getOrganization() == null || 
+                !adminUser.getOrganization().getId().equals(user.getOrganization().getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "success", false,
+                    "error", "Access denied"
+                ));
+            }
+            
+            // Update user fields
+            if (userData.containsKey("name")) {
+                user.setName((String) userData.get("name"));
+            }
+            if (userData.containsKey("email")) {
+                user.setEmail((String) userData.get("email"));
+            }
+            if (userData.containsKey("designation")) {
+                user.setDesignation((String) userData.get("designation"));
+            }
+            if (userData.containsKey("specialization")) {
+                user.setSpecialization((String) userData.get("specialization"));
+            }
+            if (userData.containsKey("bio")) {
+                user.setBio((String) userData.get("bio"));
+            }
+            
+            // Update role if provided
+            if (userData.containsKey("role")) {
+                String newRoleName = (String) userData.get("role");
+                userService.updateUserRole(userId, newRoleName);
+            }
+            
+            // Save the updated user
+            User updatedUser = userService.save(user);
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "User updated successfully",
+                "user", Map.of(
+                    "id", updatedUser.getId(),
+                    "username", updatedUser.getUsername(),
+                    "name", updatedUser.getName(),
+                    "email", updatedUser.getEmail(),
+                    "designation", updatedUser.getDesignation() != null ? updatedUser.getDesignation() : "",
+                    "specialization", updatedUser.getSpecialization() != null ? updatedUser.getSpecialization() : "",
+                    "bio", updatedUser.getBio() != null ? updatedUser.getBio() : "",
+                    "enabled", updatedUser.isEnabled()
+                )
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        } catch (Exception e) {
+            logger.error("Error updating user {}: {}", userId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "error", "Failed to update user"
+            ));
+        }
+    }
+
+    // Get user attendance data for calendar
+    @GetMapping("/users/{userId}/attendance")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<?> getUserAttendance(
+            @PathVariable Long userId,
+            @RequestParam int year,
+            @RequestParam int month) {
+        try {
+            // Verify user exists
+            User user = userService.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+
+            // Get attendance data for the specified month
+            Map<String, String> attendanceData = userService.getUserAttendanceForMonth(userId, year, month);
+            
+            return ResponseEntity.ok(attendanceData);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        } catch (Exception e) {
+            logger.error("Error fetching attendance for user {}: {}", userId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "error", "Failed to fetch attendance data"
             ));
         }
     }

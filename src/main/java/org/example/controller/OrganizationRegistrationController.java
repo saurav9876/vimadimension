@@ -87,6 +87,7 @@ public class OrganizationRegistrationController {
             // Create admin user
             User adminUser = new User();
             adminUser.setUsername(request.getAdminUsername());
+            adminUser.setName(request.getAdminName()); // Add the name field
             adminUser.setEmail(request.getAdminEmail());
             adminUser.setPassword(passwordEncoder.encode(request.getAdminPassword()));
             adminUser.setEnabled(true);
@@ -115,6 +116,7 @@ public class OrganizationRegistrationController {
         private String organizationPhone;
         private String organizationAddress;
         private String organizationWebsite;
+        private String adminName;
         private String adminUsername;
         private String adminEmail;
         private String adminPassword;
@@ -137,6 +139,9 @@ public class OrganizationRegistrationController {
 
         public String getOrganizationWebsite() { return organizationWebsite; }
         public void setOrganizationWebsite(String organizationWebsite) { this.organizationWebsite = organizationWebsite; }
+
+        public String getAdminName() { return adminName; }
+        public void setAdminName(String adminName) { this.adminName = adminName; }
 
         public String getAdminUsername() { return adminUsername; }
         public void setAdminUsername(String adminUsername) { this.adminUsername = adminUsername; }

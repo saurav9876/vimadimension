@@ -5,6 +5,7 @@ import org.example.models.Task;
 import org.example.models.TimeLog;
 import org.example.service.TaskService;
 import org.example.service.TimeLogService;
+import java.math.BigDecimal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import org.springframework.validation.BindingResult;
 // import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
@@ -174,4 +176,5 @@ public class TimeLogController {
         model.addAttribute("timeLogs", timeLogs);
         return "timelogs/timelog-list"; // Or integrate into task-details.html
     }
+
 }

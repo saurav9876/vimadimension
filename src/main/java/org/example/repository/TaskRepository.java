@@ -13,6 +13,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByProject(Project project);
     List<Task> findByAssignee(User assignee);
     List<Task> findByReporter(User reporter);
+    List<Task> findByCheckedBy(User checkedBy);
     List<Task> findByProjectId(Long projectId); // Useful for direct lookup
     boolean existsByProjectId(Long projectId); // Add this if not present
     

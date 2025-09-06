@@ -10,6 +10,9 @@ public class UserRegistrationDto {
     private String password;
     private String confirmPassword;
     private String role;          // Field for role
+    private String designation;   // Field for designation
+    private String specialization; // Field for specialization
+    private String bio;           // Field for bio
 
     // --- Constructors ---
     public UserRegistrationDto() {
@@ -73,6 +76,36 @@ public class UserRegistrationDto {
     // Setter for role
     public void setRole(String role) {
         this.role = role;
+    }
+
+    // Getter for designation
+    public String getDesignation() {
+        return designation;
+    }
+
+    // Setter for designation
+    public void setDesignation(String designation) {
+        this.designation = designation;
+    }
+
+    // Getter for specialization
+    public String getSpecialization() {
+        return specialization;
+    }
+
+    // Setter for specialization
+    public void setSpecialization(String specialization) {
+        this.specialization = specialization;
+    }
+
+    // Getter for bio
+    public String getBio() {
+        return bio;
+    }
+
+    // Setter for bio
+    public void setBio(String bio) {
+        this.bio = bio;
     }
 
     // You might also want to add equals, hashCode, and toString methods

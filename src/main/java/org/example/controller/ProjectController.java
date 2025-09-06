@@ -257,7 +257,8 @@ public class ProjectController {
                     taskCreateDto.getDescription(),
                     taskCreateDto.getProjectStage(),
                     projectId,
-                    Optional.ofNullable(taskCreateDto.getAssigneeId())
+                    Optional.ofNullable(taskCreateDto.getAssigneeId()),
+                    Optional.ofNullable(taskCreateDto.getCheckedById())
             );
             return ResponseEntity.ok(Map.of("message", "Task created successfully!"));
         } catch (IllegalArgumentException e) {

@@ -10,7 +10,8 @@ const TaskEditForm = () => {
     status: '',
     priority: 'MEDIUM',
     dueDate: '',
-    assigneeId: ''
+    assigneeId: '',
+    checkedById: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -76,14 +77,16 @@ const TaskEditForm = () => {
       
       if (response.ok) {
         const data = await response.json();
+        const task = data.task || data; // Handle both wrapped and direct response formats
         setFormData({
-          name: data.name || '',
-          description: data.description || '',
-          projectStage: data.projectStage || '',
-          status: data.status || '',
-          priority: data.priority || 'MEDIUM',
-          dueDate: data.dueDate ? data.dueDate.substring(0, 10) : '',
-          assigneeId: data.assigneeId || ''
+          name: task.name || '',
+          description: task.description || '',
+          projectStage: task.projectStage || '',
+          status: task.status || '',
+          priority: task.priority || 'MEDIUM',
+          dueDate: task.dueDate ? task.dueDate.substring(0, 10) : '',
+          assigneeId: task.assignee ? task.assignee.id : '',
+          checkedById: task.checkedBy ? task.checkedBy.id : ''
         });
       } else {
         setError('Task not found');
@@ -121,7 +124,8 @@ const TaskEditForm = () => {
           'status': formData.status,
           'priority': formData.priority,
           'dueDate': formData.dueDate,
-          'assigneeId': formData.assigneeId
+          'assigneeId': formData.assigneeId,
+          'checkedById': formData.checkedById
         }),
         credentials: 'include'
       });
@@ -180,14 +184,14 @@ const TaskEditForm = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="description">Description:</label>
+            <label htmlFor="description">Acceptance Criteria:</label>
             <textarea
               id="description"
               name="description"
               value={formData.description}
               onChange={handleChange}
               rows="4"
-              placeholder="Enter task description (optional)"
+              placeholder="This task will be done when the following acceptance criteria is completed..."
             />
           </div>
 
@@ -260,22 +264,42 @@ const TaskEditForm = () => {
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="assigneeId">Assign To:</label>
-            <select
-              id="assigneeId"
-              name="assigneeId"
-              value={formData.assigneeId}
-              onChange={handleChange}
-            >
-              <option value="">Unassigned</option>
-              {!fetchingUsers && users.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name || user.username}
-                </option>
-              ))}
-            </select>
-            <small className="form-help">Optional: assign task to a team member</small>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="assigneeId">Assign To:</label>
+              <select
+                id="assigneeId"
+                name="assigneeId"
+                value={formData.assigneeId}
+                onChange={handleChange}
+              >
+                <option value="">Unassigned</option>
+                {!fetchingUsers && users.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name || user.username}
+                  </option>
+                ))}
+              </select>
+              <small className="form-help">Optional: assign task to a team member</small>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="checkedById">Checked By:</label>
+              <select
+                id="checkedById"
+                name="checkedById"
+                value={formData.checkedById}
+                onChange={handleChange}
+              >
+                <option value="">No checker assigned</option>
+                {!fetchingUsers && users.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name || user.username}
+                  </option>
+                ))}
+              </select>
+              <small className="form-help">Optional: assign a checker to verify task completion</small>
+            </div>
           </div>
 
           <div className="project-actions">

@@ -77,3 +77,8 @@ mysql-data/
 build/
 out/
 target/
+
+# Cookie files (contain sensitive session data)
+*.cookies.txt
+cookies*.txt
+*_cookies.txt

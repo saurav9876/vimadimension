@@ -26,6 +26,8 @@ public class TaskCreateDto {
 
     private Long assigneeId; // Optional: ID of the user to assign the task to
 
+    private Long checkedById; // Optional: ID of the user who will check task completion
+
     private TaskPriority priority; // Optional: Task priority
 
     private LocalDate dueDate; // Optional: Due date for the task
@@ -69,6 +71,14 @@ public class TaskCreateDto {
 
     public void setAssigneeId(Long assigneeId) {
         this.assigneeId = assigneeId;
+    }
+
+    public Long getCheckedById() {
+        return checkedById;
+    }
+
+    public void setCheckedById(Long checkedById) {
+        this.checkedById = checkedById;
     }
 
     public TaskPriority getPriority() {

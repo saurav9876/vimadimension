@@ -157,7 +157,8 @@ const UsersList = () => {
               <div className="user-header">
                 <h3>{user.name || user.username}</h3>
                 <span className={`role-badge ${user.roles.includes('ROLE_ADMIN') ? 'admin' : 'user'}`}>
-                  {user.roles.includes('ROLE_ADMIN') ? 'Admin' : 'User'}
+                  {user.roles.includes('ROLE_ADMIN') ? 'Admin' : 
+                   user.roles.includes('ROLE_MANAGER') ? 'Manager' : 'User'}
                 </span>
               </div>
               
@@ -176,8 +177,20 @@ const UsersList = () => {
 
               <div className="user-actions">
                 <button 
+                  onClick={() => navigate(`/admin/users/${user.id}/details`)}
+                  className="action-btn view-btn"
+                >
+                  View
+                </button>
+                <button 
+                  onClick={() => navigate(`/admin/users/${user.id}/edit`)}
+                  className="action-btn edit-btn"
+                >
+                  Edit
+                </button>
+                <button 
                   onClick={() => handleToggleUserStatus(user.id, user.enabled)}
-                  className="btn-small btn-outline"
+                  className="action-btn toggle-btn"
                   disabled={togglingStatus}
                 >
                   {togglingStatus ? 'Toggling...' : user.enabled ? 'Deactivate' : 'Activate'}

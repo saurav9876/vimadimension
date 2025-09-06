@@ -57,6 +57,11 @@ public class Task {
     @JsonIgnore // Prevent Hibernate proxy serialization issues
     private User assignee; // The user to whom the task is assigned
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "checked_by_id") // Can be null if no checker is assigned
+    @JsonIgnore // Prevent Hibernate proxy serialization issues
+    private User checkedBy; // The user responsible for verifying task completion
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -153,6 +158,14 @@ public class Task {
         this.assignee = assignee;
     }
 
+    public User getCheckedBy() {
+        return checkedBy;
+    }
+
+    public void setCheckedBy(User checkedBy) {
+        this.checkedBy = checkedBy;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -222,6 +235,7 @@ public class Task {
                 ", projectId=" + (project != null ? project.getId() : null) +
                 ", reporterId=" + (reporter != null ? reporter.getId() : null) +
                 ", assigneeId=" + (assignee != null ? assignee.getId() : null) +
+                ", checkedById=" + (checkedBy != null ? checkedBy.getId() : null) +
                 '}';
     }
 }

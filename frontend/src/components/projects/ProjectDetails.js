@@ -55,6 +55,22 @@ const ProjectDetails = ({ user }) => {
     }
   };
 
+  const getPriorityClass = (priority) => {
+    if (!priority) return 'priority-medium';
+    
+    switch (priority.toString().toLowerCase()) {
+      case 'high':
+        return 'priority-high';
+      case 'urgent':
+        return 'priority-urgent';
+      case 'low':
+        return 'priority-low';
+      case 'medium':
+      default:
+        return 'priority-medium';
+    }
+  };
+
   if (loading) return <div className="main-content">Loading...</div>;
   if (error) return <div className="main-content"><div className="alert alert-danger">{error}</div></div>;
   if (!project) return <div className="main-content">Project not found</div>;
@@ -145,20 +161,50 @@ const ProjectDetails = ({ user }) => {
             {tasks.map(task => (
               <div key={task.id} className="task-item">
                 <div className="task-info">
-                  <h4>
-                    <Link to={`/tasks/${task.id}/details`}>
-                      {task.name}
-                    </Link>
-                  </h4>
-                  <p>{task.description}</p>
-                  {task.assignee && (
-                    <p><strong>Assigned to:</strong> {task.assignee.username}</p>
-                  )}
+                  <div className="task-header">
+                    <h4>
+                      <Link to={`/tasks/${task.id}/details`}>
+                        {task.name}
+                      </Link>
+                      <span className={`task-status ${getStatusClass(task.status)}`}>
+                        {task.status?.displayName || task.status?.replace(/_/g, ' ')}
+                      </span>
+                      {task.priority && (
+                        <span className={`priority-badge ${getPriorityClass(task.priority)}`}>
+                          {task.priority?.replace(/_/g, ' ')}
+                        </span>
+                      )}
+                    </h4>
+                  </div>
+                  
+                  <div className="task-meta">
+                    {task.assignee && (
+                      <div className="meta-item">
+                        <span className="meta-label">Assigned to:</span>
+                        <span className="meta-value">{task.assignee.name || task.assignee.username}</span>
+                      </div>
+                    )}
+                    
+                    {task.dueDate && (
+                      <div className="meta-item">
+                        <span className={`due-date ${new Date(task.dueDate) < new Date() ? 'overdue' : ''}`}>
+                          Due: {new Date(task.dueDate).toLocaleDateString()}
+                          {new Date(task.dueDate) < new Date() && (
+                            <span className="overdue-badge"> OVERDUE</span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <span className={`task-status ${getStatusClass(task.status)}`}>
-                    {task.status?.displayName || task.status?.replace(/_/g, ' ')}
-                  </span>
+                
+                <div className="task-actions">
+                  <Link to={`/tasks/${task.id}/details`} className="btn-small btn-outline">
+                    View Details
+                  </Link>
+                  <Link to={`/timelogs/task/${task.id}/new`} className="btn-small btn-primary">
+                    Log Time
+                  </Link>
                 </div>
               </div>
             ))}

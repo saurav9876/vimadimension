@@ -94,6 +94,7 @@ public class ProfileController {
         try {
             String name = request.get("name");
             String email = request.get("email");
+            String bio = request.get("bio");
             
             if (name == null || name.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of(
@@ -123,7 +124,7 @@ public class ProfileController {
             var user = userOptional.get();
             
             // Update the profile
-            userService.updateUserProfile(user.getId(), name, email);
+            userService.updateUserProfile(user.getId(), name, email, bio);
             
             return ResponseEntity.ok(Map.of(
                 "success", true,

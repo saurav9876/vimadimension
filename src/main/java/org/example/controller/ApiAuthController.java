@@ -14,9 +14,12 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.example.models.User;
 import org.example.service.UserService;
@@ -24,6 +27,8 @@ import org.example.service.UserService;
 @RestController
 @RequestMapping("/api/auth")
 public class ApiAuthController {
+
+    private static final Logger logger = LoggerFactory.getLogger(ApiAuthController.class);
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -133,5 +138,40 @@ public class ApiAuthController {
         }
         
         return ResponseEntity.status(401).build();
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
+        try {
+            // Get the current authentication
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            
+            if (auth != null) {
+                logger.info("Logging out user: {}", auth.getName());
+                
+                // Invalidate the session
+                HttpSession session = request.getSession(false);
+                if (session != null) {
+                    session.invalidate();
+                    logger.info("Session invalidated: {}", session.getId());
+                }
+                
+                // Clear the security context
+                SecurityContextHolder.clearContext();
+            }
+            
+            Map<String, Object> logoutResponse = new HashMap<>();
+            logoutResponse.put("success", true);
+            logoutResponse.put("message", "Logged out successfully");
+            
+            logger.info("User logged out successfully");
+            return ResponseEntity.ok(logoutResponse);
+        } catch (Exception e) {
+            logger.error("Logout error: {}", e.getMessage(), e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Logout failed");
+            return ResponseEntity.status(500).body(errorResponse);
+        }
     }
 }

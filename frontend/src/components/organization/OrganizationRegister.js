@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { validateRegistrationForm, getFieldValidation } from '../../utils/validation';
 
 const OrganizationRegister = () => {
     const navigate = useNavigate();
@@ -21,16 +22,38 @@ const OrganizationRegister = () => {
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState('');
     const [currentStep, setCurrentStep] = useState(1);
+    const [fieldErrors, setFieldErrors] = useState({});
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
+        
+        // Trim whitespace for username and email fields
+        const trimmedValue = (name === 'adminUsername' || name === 'adminEmail' || name === 'organizationEmail') ? value.trim() : value;
+        
         setFormData(prev => ({
             ...prev,
-            [name]: value
+            [name]: trimmedValue
         }));
+        
+        // Real-time validation for admin fields
+        if (name === 'adminName' || name === 'adminUsername' || name === 'adminEmail' || name === 'adminPassword' || name === 'confirmPassword') {
+            const validation = getFieldValidation(name.replace('admin', '').toLowerCase(), trimmedValue, formData);
+            if (!validation.isValid) {
+                setFieldErrors({
+                    ...fieldErrors,
+                    [name]: validation.message
+                });
+            } else {
+                setFieldErrors({
+                    ...fieldErrors,
+                    [name]: ''
+                });
+            }
+        }
     };
 
     const validateForm = () => {
+        // Validate organization fields
         if (!formData.organizationName.trim()) {
             setMessage('Organization name is required');
             setMessageType('error');
@@ -41,36 +64,25 @@ const OrganizationRegister = () => {
             setMessageType('error');
             return false;
         }
-        if (!formData.adminName.trim()) {
-            setMessage('Admin name is required');
+        
+        // Validate admin user fields using the validation utility
+        const adminFormData = {
+            name: formData.adminName,
+            username: formData.adminUsername,
+            email: formData.adminEmail,
+            password: formData.adminPassword,
+            confirmPassword: formData.confirmPassword
+        };
+        
+        const validation = validateRegistrationForm(adminFormData);
+        
+        if (!validation.isValid) {
+            setFieldErrors(validation.errors);
+            setMessage('Please fix the validation errors below');
             setMessageType('error');
             return false;
         }
-        if (!formData.adminUsername.trim()) {
-            setMessage('Admin username is required');
-            setMessageType('error');
-            return false;
-        }
-        if (!formData.adminEmail.trim()) {
-            setMessage('Admin email is required');
-            setMessageType('error');
-            return false;
-        }
-        if (!formData.adminPassword.trim()) {
-            setMessage('Admin password is required');
-            setMessageType('error');
-            return false;
-        }
-        if (formData.adminPassword !== formData.confirmPassword) {
-            setMessage('Passwords do not match');
-            setMessageType('error');
-            return false;
-        }
-        if (formData.adminPassword.length < 6) {
-            setMessage('Password must be at least 6 characters long');
-            setMessageType('error');
-            return false;
-        }
+        
         return true;
     };
 
