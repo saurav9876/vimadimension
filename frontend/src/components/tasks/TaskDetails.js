@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 
 const TaskDetails = ({ user }) => {
   const { id } = useParams();
@@ -160,12 +160,14 @@ const TaskDetails = ({ user }) => {
 
   return (
     <div className="main-content">
+      <div className="back-button-container">
+        <button onClick={goBack} className="back-button">
+          ← Back
+        </button>
+      </div>
       <div className="page-header">
         <h1 className="page-title">{task.name}</h1>
         <div className="page-actions">
-          <button onClick={goBack} className="btn-outline">
-            ← Back
-          </button>
           {/* Show button if user is assigned as checker */}
           {task?.checkedBy && user?.id === task.checkedBy.id && (
             <button 
@@ -181,9 +183,12 @@ const TaskDetails = ({ user }) => {
           )}
           {canEditTask() && (
             <>
-              <Link to={`/tasks/${id}/edit`} className="btn-secondary">
+              <button 
+                onClick={() => navigate(`/tasks/${id}/edit`, { replace: true })}
+                className="btn-secondary"
+              >
                 Edit Task
-              </Link>
+              </button>
               <button 
                 onClick={handleDeleteTask}
                 className="btn-danger"

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const CreateProject = () => {
+const CreateProject = ({ user }) => {
   const [formData, setFormData] = useState({
     name: '',
     clientName: '',
@@ -19,6 +19,9 @@ const CreateProject = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Check if user has admin role
+  const isAdmin = user?.authorities?.some(auth => auth.authority === 'ROLE_ADMIN') || false;
 
   const projectCategories = [
     { value: 'ARCHITECTURE', label: 'Architecture' },
@@ -248,35 +251,37 @@ const CreateProject = () => {
             </select>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="budget">Budget:</label>
-              <input
-                type="number"
-                id="budget"
-                name="budget"
-                value={formData.budget}
-                onChange={handleChange}
-                step="0.01"
-                min="0"
-                placeholder="Enter project budget"
-              />
-            </div>
+          {isAdmin && (
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="budget">Budget (₹):</label>
+                <input
+                  type="number"
+                  id="budget"
+                  name="budget"
+                  value={formData.budget}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="Enter project budget in Indian Rupees"
+                />
+              </div>
 
-            <div className="form-group">
-              <label htmlFor="actualCost">Actual Cost:</label>
-              <input
-                type="number"
-                id="actualCost"
-                name="actualCost"
-                value={formData.actualCost}
-                onChange={handleChange}
-                step="0.01"
-                min="0"
-                placeholder="Enter actual cost incurred"
-              />
+              <div className="form-group">
+                <label htmlFor="actualCost">Actual Cost (₹):</label>
+                <input
+                  type="number"
+                  id="actualCost"
+                  name="actualCost"
+                  value={formData.actualCost}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="Enter actual cost incurred in Indian Rupees"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="priority">Project Priority *:</label>

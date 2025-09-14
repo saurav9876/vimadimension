@@ -54,7 +54,7 @@ const TimeLogForm = () => {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        navigate(`/tasks/${id}/details`);
+        navigate(`/tasks/${id}/details`, { replace: true });
       } else {
         console.error('Time log creation failed:', data);
         setError(data.error || 'Failed to log time');
@@ -147,7 +147,7 @@ const TimeLogForm = () => {
             <button 
               type="button" 
               className="btn-outline"
-              onClick={() => navigate(`/tasks/${id}/details`)}
+              onClick={() => navigate(`/tasks/${id}/details`, { replace: true })}
               disabled={loading}
             >
               Cancel

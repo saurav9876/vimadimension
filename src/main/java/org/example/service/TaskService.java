@@ -77,8 +77,11 @@ public class TaskService {
             throw new IllegalArgumentException("Project stage cannot be empty.");
         }
 
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new IllegalArgumentException("Project with ID " + projectId + " not found. Cannot create task."));
+        Project project = null;
+        if (projectId != null) {
+            project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new IllegalArgumentException("Project with ID " + projectId + " not found. Cannot create task."));
+        }
 
         User reporter = getCurrentAuthenticatedUser();
         User assignee = null;
@@ -469,5 +472,17 @@ public class TaskService {
         if (!canEdit) {
             throw new IllegalArgumentException("You do not have permission to edit this task. You can only edit tasks that are assigned to you, created by you, or assigned to you for checking.");
         }
+    }
+
+    // Get enabled users for task assignment from the same organization as current user
+    public List<User> getAllUsersForTaskAssignment() {
+        User currentUser = getCurrentAuthenticatedUser();
+        
+        if (currentUser.getOrganization() == null) {
+            throw new IllegalStateException("Current user must belong to an organization to view users for task assignment");
+        }
+        
+        // Only return enabled users (enabled = true)
+        return userRepository.findByOrganization_IdAndEnabled(currentUser.getOrganization().getId(), true);
     }
 }

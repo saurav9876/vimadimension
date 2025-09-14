@@ -5,23 +5,101 @@ const ProjectsList = ({ user }) => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filters, setFilters] = useState({
+    category: '',
+    priority: '',
+    status: ''
+  });
+  const [pagination, setPagination] = useState({
+    currentPage: 0, // 0-based for backend
+    itemsPerPage: 9,
+    totalPages: 0,
+    totalItems: 0,
+    hasNext: false,
+    hasPrevious: false
+  });
 
   // Check if user has admin role
   const isAdmin = user?.authorities?.some(auth => auth.authority === 'ROLE_ADMIN') || false;
 
+  // Available filter options
+  const projectCategories = [
+    { value: '', label: 'All Categories' },
+    { value: 'ARCHITECTURE', label: 'Architecture' },
+    { value: 'INTERIOR', label: 'Interior' },
+    { value: 'STRUCTURE', label: 'Structure' },
+    { value: 'URBAN', label: 'Urban' },
+    { value: 'LANDSCAPE', label: 'Landscape' },
+    { value: 'ACOUSTIC', label: 'Acoustic' },
+    { value: 'OTHER', label: 'Other' }
+  ];
+
+  const projectPriorities = [
+    { value: '', label: 'All Priorities' },
+    { value: 'LOW', label: 'Low' },
+    { value: 'MEDIUM', label: 'Medium' },
+    { value: 'HIGH', label: 'High' },
+    { value: 'URGENT', label: 'Urgent' }
+  ];
+
+  const projectStatuses = [
+    { value: '', label: 'All Statuses' },
+    { value: 'IN_DISCUSSION', label: 'In Discussion' },
+    { value: 'PROGRESS', label: 'Progress' },
+    { value: 'ON_HOLD', label: 'On Hold' },
+    { value: 'COMPLETED', label: 'Completed' },
+    { value: 'ARCHIVED', label: 'Archived' }
+  ];
+
+  // Fetch projects when filters or pagination change
   useEffect(() => {
     fetchProjects();
-  }, []);
+  }, [filters, pagination.currentPage]);
+
+  // Reset to page 0 when filters change
+  useEffect(() => {
+    setPagination(prev => ({
+      ...prev,
+      currentPage: 0
+    }));
+  }, [filters]);
 
   const fetchProjects = async () => {
     try {
-      const response = await fetch('/api/projects', {
+      setLoading(true);
+      
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: pagination.currentPage.toString(),
+        size: pagination.itemsPerPage.toString()
+      });
+      
+      if (filters.category) {
+        params.append('category', filters.category);
+      }
+      
+      if (filters.priority) {
+        params.append('priority', filters.priority);
+      }
+      
+      if (filters.status) {
+        params.append('status', filters.status);
+      }
+      
+      const response = await fetch(`/api/projects/paginated?${params}`, {
         credentials: 'include'
       });
       
       if (response.ok) {
         const data = await response.json();
-        setProjects(data);
+        setProjects(data.projects || []);
+        setPagination(prev => ({
+          ...prev,
+          totalPages: data.totalPages || 0,
+          totalItems: data.totalItems || 0,
+          hasNext: data.hasNext || false,
+          hasPrevious: data.hasPrevious || false
+        }));
       } else {
         setError('Failed to load projects');
       }
@@ -34,15 +112,58 @@ const ProjectsList = ({ user }) => {
   };
 
 
+  const handleFilterChange = (filterType, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      category: '',
+      priority: '',
+      status: ''
+    });
+  };
+
+  const handlePageChange = (newPage) => {
+    setPagination(prev => ({
+      ...prev,
+      currentPage: newPage
+    }));
+  };
+
+  const goToFirstPage = () => handlePageChange(0);
+  const goToPreviousPage = () => handlePageChange(pagination.currentPage - 1);
+  const goToNextPage = () => handlePageChange(pagination.currentPage + 1);
+  const goToLastPage = () => handlePageChange(pagination.totalPages - 1);
+
+
   if (loading) return <div className="main-content">Loading...</div>;
 
   return (
     <div className="main-content">
-      <div className="page-header">
-        <div className="page-actions">
-          <Link to="/projects/new" className="btn-primary">
-            New Project
-          </Link>
+      {/* Minimal Header */}
+      <div className="minimal-header">
+        <h1>Projects ({pagination.totalItems})</h1>
+        <div className="minimal-controls">
+          <select value={filters.category} onChange={(e) => handleFilterChange('category', e.target.value)}>
+            {projectCategories.map(category => (
+              <option key={category.value} value={category.value}>{category.label}</option>
+            ))}
+          </select>
+          <select value={filters.priority} onChange={(e) => handleFilterChange('priority', e.target.value)}>
+            {projectPriorities.map(priority => (
+              <option key={priority.value} value={priority.value}>{priority.label}</option>
+            ))}
+          </select>
+          <select value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)}>
+            {projectStatuses.map(status => (
+              <option key={status.value} value={status.value}>{status.label}</option>
+            ))}
+          </select>
+          <Link to="/projects/new" className="btn-minimal">+ New Project</Link>
         </div>
       </div>
 
@@ -54,7 +175,12 @@ const ProjectsList = ({ user }) => {
 
       {projects.length === 0 ? (
         <div className="text-center">
-          <p>No projects found.</p>
+          <p>{pagination.totalItems === 0 ? 'No projects found.' : 'No projects match the selected filters.'}</p>
+          {pagination.totalItems > 0 && (
+            <button onClick={clearFilters} className="btn-outline">
+              Clear Filters
+            </button>
+          )}
         </div>
       ) : (
         <div className="projects-grid">
@@ -109,19 +235,19 @@ const ProjectsList = ({ user }) => {
                     <span className="info-value">{project.description}</span>
                   </div>
                 )}
-                {project.budget && (
+                {isAdmin && project.budget && (
                   <div className="info-row">
                     <span className="info-label">Budget:</span>
-                    <span className="info-value">${parseFloat(project.budget).toLocaleString()}</span>
+                    <span className="info-value">₹{parseFloat(project.budget).toLocaleString('en-IN')}</span>
                   </div>
                 )}
-                {project.actualCost && (
+                {isAdmin && project.actualCost && (
                   <div className="info-row">
                     <span className="info-label">Actual Cost:</span>
-                    <span className="info-value">${parseFloat(project.actualCost).toLocaleString()}</span>
+                    <span className="info-value">₹{parseFloat(project.actualCost).toLocaleString('en-IN')}</span>
                   </div>
                 )}
-                {project.budget && project.actualCost && (
+                {isAdmin && project.budget && project.actualCost && (
                   <div className="info-row">
                     <span className="info-label">Cost Status:</span>
                     <span className={`info-value ${parseFloat(project.actualCost) > parseFloat(project.budget) ? 'text-danger' : 'text-success'}`}>
@@ -141,6 +267,77 @@ const ProjectsList = ({ user }) => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {pagination.totalPages > 1 && (
+        <div className="pagination-controls">
+          <div className="pagination-info">
+            <span>
+              Page {pagination.currentPage + 1} of {pagination.totalPages}
+            </span>
+          </div>
+          
+          <div className="pagination-buttons">
+            <button
+              onClick={goToFirstPage}
+              disabled={pagination.currentPage === 0}
+              className="btn-small btn-outline"
+            >
+              First
+            </button>
+            
+            <button
+              onClick={goToPreviousPage}
+              disabled={pagination.currentPage === 0}
+              className="btn-small btn-outline"
+            >
+              Previous
+            </button>
+            
+            {/* Page Numbers */}
+            <div className="page-numbers">
+              {Array.from({ length: pagination.totalPages }, (_, i) => i)
+                .filter(page => {
+                  // Show first page, last page, current page, and pages around current
+                  return page === 0 || 
+                         page === pagination.totalPages - 1 || 
+                         (page >= pagination.currentPage - 1 && page <= pagination.currentPage + 1);
+                })
+                .map((page, index, array) => {
+                  // Add ellipsis if there's a gap
+                  const showEllipsis = index > 0 && page - array[index - 1] > 1;
+                  return (
+                    <React.Fragment key={page}>
+                      {showEllipsis && <span className="page-ellipsis">...</span>}
+                      <button
+                        onClick={() => handlePageChange(page)}
+                        className={`btn-small ${page === pagination.currentPage ? 'btn-primary' : 'btn-outline'}`}
+                      >
+                        {page + 1}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+            </div>
+            
+            <button
+              onClick={goToNextPage}
+              disabled={pagination.currentPage === pagination.totalPages - 1}
+              className="btn-small btn-outline"
+            >
+              Next
+            </button>
+            
+            <button
+              onClick={goToLastPage}
+              disabled={pagination.currentPage === pagination.totalPages - 1}
+              className="btn-small btn-outline"
+            >
+              Last
+            </button>
+          </div>
         </div>
       )}
     </div>

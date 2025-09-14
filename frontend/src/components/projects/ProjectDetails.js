@@ -150,12 +150,14 @@ const ProjectDetails = ({ user }) => {
 
   return (
     <div className="main-content">
+      <div className="back-button-container">
+        <Link to="/projects" className="back-button">
+          ← Back to Projects
+        </Link>
+      </div>
       <div className="page-header">
         <h1 className="page-title">{project.name}</h1>
         <div className="page-actions">
-          <Link to={`/projects/${id}/tasks/new`} className="btn-primary">
-            Add Task
-          </Link>
           {isAdmin && (
             <>
               <Link to={`/projects/${id}/edit`} className="btn-secondary">
@@ -171,9 +173,6 @@ const ProjectDetails = ({ user }) => {
               </button>
             </>
           )}
-          <Link to="/projects" className="btn-outline">
-            Back to Projects
-          </Link>
         </div>
       </div>
 
@@ -193,6 +192,14 @@ const ProjectDetails = ({ user }) => {
           <div className="info-row">
             <span className="info-label">Project Category:</span>
             <span className="info-value">{project.projectCategory?.replace('_', ' ')}</span>
+          </div>
+          <div className="info-row">
+            <span className="info-label">Project Priority:</span>
+            <span className="info-value">
+              <span className={`priority-${project.priority?.toLowerCase()}`}>
+                {project.priority?.replace('_', ' ')}
+              </span>
+            </span>
           </div>
           <div className="info-row">
             <span className="info-label">Project Stage:</span>
@@ -216,6 +223,30 @@ const ProjectDetails = ({ user }) => {
               <span className="info-value">{new Date(project.estimatedEndDate).toLocaleDateString()}</span>
             </div>
           )}
+          {isAdmin && project.budget && (
+            <div className="info-row">
+              <span className="info-label">Budget:</span>
+              <span className="info-value">₹{project.budget.toLocaleString('en-IN')}</span>
+            </div>
+          )}
+          {isAdmin && project.actualCost && (
+            <div className="info-row">
+              <span className="info-label">Actual Cost:</span>
+              <span className="info-value">₹{project.actualCost.toLocaleString('en-IN')}</span>
+            </div>
+          )}
+          {project.createdAt && (
+            <div className="info-row">
+              <span className="info-label">Created:</span>
+              <span className="info-value">{new Date(project.createdAt).toLocaleDateString()}</span>
+            </div>
+          )}
+          {project.updatedAt && (
+            <div className="info-row">
+              <span className="info-label">Last Updated:</span>
+              <span className="info-value">{new Date(project.updatedAt).toLocaleDateString()}</span>
+            </div>
+          )}
           {project.description && (
             <div className="info-row">
               <span className="info-label">Description:</span>
@@ -225,72 +256,177 @@ const ProjectDetails = ({ user }) => {
         </div>
       </div>
 
-      <div className="mt-2">
-        <div className="page-header-compact">
-          <h2>Tasks</h2>
+      {/* Modern Tasks Section */}
+      <div className="modern-tasks-section">
+        <div className="tasks-header">
+          <h2>Project Tasks ({tasks.length})</h2>
+          <Link to={`/projects/${id}/tasks/new`} className="btn-primary btn-add-task">
+            + Add New Task
+          </Link>
         </div>
 
         {tasks.length === 0 ? (
-          <div className="text-center p-2">
-            <p>No tasks found for this project.</p>
+          <div className="empty-state">
+            <span className="empty-icon">📋</span>
+            <h3>No tasks yet</h3>
+            <p>This project doesn't have any tasks. Create the first task to get started.</p>
           </div>
         ) : (
-          <div className="tasks-list">
+          <div className="modern-tasks-grid">
             {tasks.map(task => (
-              <div key={task.id} className="task-item">
-                <div className="task-info">
-                  <div className="task-header">
-                    <h4>
+              <div key={task.id} className="modern-task-card-new">
+                <div className="task-card-header-new">
+                  <div className="task-title-section">
+                    <h3 className="task-title-new">
                       <Link to={`/tasks/${task.id}/details`}>
                         {task.name}
                       </Link>
-                      <span className={`task-status ${getStatusClass(task.status)}`}>
-                        {task.status?.displayName || task.status?.replace(/_/g, ' ')}
+                    </h3>
+                    <div className="task-badges-new">
+                      <span className={`task-status-new ${getStatusClass(task.status)}`}>
+                        {task.status?.replace(/_/g, ' ')}
                       </span>
                       {task.priority && (
-                        <span className={`priority-badge ${getPriorityClass(task.priority)}`}>
-                          {task.priority?.replace(/_/g, ' ')}
+                        <span className={`priority-badge-new ${getPriorityClass(task.priority)}`}>
+                          {task.priority.replace(/_/g, ' ')}
                         </span>
                       )}
-                    </h4>
+                    </div>
                   </div>
-                  
-                  <div className="task-meta">
-                    {task.assignee && (
-                      <div className="meta-item">
-                        <span className="meta-label">Assigned to:</span>
-                        <span className="meta-value">{task.assignee.name || task.assignee.username}</span>
-                      </div>
+                  <div className="task-actions-new">
+                    <Link to={`/tasks/${task.id}/details`} className="btn-task-action btn-view">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="2"/>
+                        <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                      View
+                    </Link>
+                    {canEditTask(task) && (
+                      <Link to={`/tasks/${task.id}/edit`} className="btn-task-action btn-edit">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2"/>
+                        </svg>
+                        Edit
+                      </Link>
                     )}
-                    
-                    {task.dueDate && (
-                      <div className="meta-item">
-                        <span className={`due-date ${new Date(task.dueDate) < new Date() ? 'overdue' : ''}`}>
-                          Due: {new Date(task.dueDate).toLocaleDateString()}
-                          {new Date(task.dueDate) < new Date() && (
-                            <span className="overdue-badge"> OVERDUE</span>
-                          )}
-                        </span>
-                      </div>
+                    <Link to={`/timelogs/task/${task.id}/new`} className="btn-task-action btn-time">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                        <polyline points="12,6 12,12 16,14" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                      Time
+                    </Link>
+                    {canEditTask(task) && (
+                      <button 
+                        onClick={() => handleDeleteTask(task.id, task.name)}
+                        className="btn-task-action btn-delete"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <polyline points="3,6 5,6 21,6" stroke="currentColor" strokeWidth="2"/>
+                          <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2" stroke="currentColor" strokeWidth="2"/>
+                        </svg>
+                        Delete
+                      </button>
                     )}
                   </div>
                 </div>
                 
-                <div className="task-actions">
-                  <Link to={`/tasks/${task.id}/details`} className="btn-small btn-outline">
-                    View Details
-                  </Link>
-                  <Link to={`/timelogs/task/${task.id}/new`} className="btn-small btn-primary">
-                    Log Time
-                  </Link>
-                  {canEditTask(task) && (
-                    <button 
-                      onClick={() => handleDeleteTask(task.id, task.name)}
-                      className="btn-small btn-danger"
-                    >
-                      Delete
-                    </button>
+                <div className="task-card-content-new">
+                  {task.description && (
+                    <p className="task-description-new">{task.description}</p>
                   )}
+                  
+                  <div className="task-meta-new">
+                    <div className="task-meta-left">
+                      {task.project && (
+                        <div className="meta-item-new">
+                          <div className="meta-icon">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2"/>
+                            </svg>
+                          </div>
+                          <div className="meta-content">
+                            <span className="meta-label-new">Project</span>
+                            <Link to={`/projects/${task.project.id}/details`} className="meta-value-new project-link-new">
+                              {task.project.name}
+                            </Link>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {task.projectStage && (
+                        <div className="meta-item-new">
+                          <div className="meta-icon">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                              <path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="2"/>
+                              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke="currentColor" strokeWidth="2"/>
+                            </svg>
+                          </div>
+                          <div className="meta-content">
+                            <span className="meta-label-new">Stage</span>
+                            <span className="meta-value-new">
+                              {task.projectStage.replace(/STAGE_\d+_/, '').replace(/_/g, ' ')}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {task.dueDate && (
+                        <div className="meta-item-new">
+                          <div className="meta-icon">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                              <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" strokeWidth="2"/>
+                              <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" strokeWidth="2"/>
+                              <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" strokeWidth="2"/>
+                            </svg>
+                          </div>
+                          <div className="meta-content">
+                            <span className="meta-label-new">Due Date</span>
+                            <span className={`meta-value-new due-date-new ${new Date(task.dueDate) < new Date() ? 'overdue' : ''}`}>
+                              {new Date(task.dueDate).toLocaleDateString()}
+                              {new Date(task.dueDate) < new Date() && (
+                                <span className="overdue-indicator">OVERDUE</span>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="task-meta-right">
+                      {task.assignee && (
+                        <div className="meta-item-new">
+                          <div className="meta-icon">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
+                              <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+                            </svg>
+                          </div>
+                          <div className="meta-content">
+                            <span className="meta-label-new">Assigned to</span>
+                            <span className="meta-value-new">{task.assignee.name || task.assignee.username}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {task.checkedBy && (
+                        <div className="meta-item-new">
+                          <div className="meta-icon">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                              <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2"/>
+                              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                            </svg>
+                          </div>
+                          <div className="meta-content">
+                            <span className="meta-label-new">Checked by</span>
+                            <span className="meta-value-new">{task.checkedBy.name || task.checkedBy.username}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}

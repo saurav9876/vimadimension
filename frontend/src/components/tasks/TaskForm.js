@@ -16,6 +16,7 @@ const TaskForm = () => {
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
   const [fetchingUsers, setFetchingUsers] = useState(true);
+  const [project, setProject] = useState(null);
   const navigate = useNavigate();
 
   const projectStages = [
@@ -37,11 +38,27 @@ const TaskForm = () => {
 
   useEffect(() => {
     fetchUsers();
+    fetchProjectDetails();
   }, []);
+
+  const fetchProjectDetails = async () => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/details`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setProject(data.project);
+      }
+    } catch (error) {
+      console.error('Error fetching project details:', error);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/admin/users', {
+      const response = await fetch('/api/tasks/users', {
         credentials: 'include'
       });
       
@@ -105,7 +122,9 @@ const TaskForm = () => {
 
   return (
     <div className="main-content">
-      <h1 className="page-title">Create New Task</h1>
+      <h1 className="page-title">
+        {project ? `Create New Task for Project ${project.name}` : 'Create New Task'}
+      </h1>
 
       {error && (
         <div className="alert alert-danger">

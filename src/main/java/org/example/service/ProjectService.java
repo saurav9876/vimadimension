@@ -11,16 +11,24 @@ import org.example.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.example.models.enums.ProjectStatus;
+import org.example.models.enums.ProjectCategory;
+import org.example.models.enums.ProjectPriority;
 
 @Service
 public class ProjectService {
@@ -371,5 +379,88 @@ public class ProjectService {
     // Helper method to check existence, can be useful in controllers
     public boolean existsById(Long projectId) {
         return projectRepository.existsById(projectId);
+    }
+
+    /**
+     * Retrieves paginated and filtered projects for a user's organization.
+     *
+     * @param username The username of the user
+     * @param page The page number (0-based)
+     * @param size The number of projects per page
+     * @param category Optional project category filter
+     * @param priority Optional project priority filter
+     * @param status Optional project status filter
+     * @return A map containing paginated projects and metadata
+     */
+    public Map<String, Object> findProjectsPaginatedAndFiltered(String username, int page, int size, 
+                                                                String category, String priority, String status) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        
+        if (user.getOrganization() == null) {
+            logger.warn("User {} does not belong to any organization. Returning empty project list.", username);
+            Map<String, Object> emptyResponse = new HashMap<>();
+            emptyResponse.put("projects", List.of());
+            emptyResponse.put("currentPage", 0);
+            emptyResponse.put("totalItems", 0);
+            emptyResponse.put("totalPages", 0);
+            emptyResponse.put("hasNext", false);
+            emptyResponse.put("hasPrevious", false);
+            return emptyResponse;
+        }
+
+        // Parse category, priority, and status filters
+        ProjectCategory categoryFilter = null;
+        ProjectPriority priorityFilter = null;
+        ProjectStatus statusFilter = null;
+        
+        if (category != null && !category.trim().isEmpty()) {
+            try {
+                categoryFilter = ProjectCategory.valueOf(category.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                logger.warn("Invalid project category filter: {}", category);
+            }
+        }
+        
+        if (priority != null && !priority.trim().isEmpty()) {
+            try {
+                priorityFilter = ProjectPriority.valueOf(priority.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                logger.warn("Invalid project priority filter: {}", priority);
+            }
+        }
+        
+        if (status != null && !status.trim().isEmpty()) {
+            try {
+                statusFilter = ProjectStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                logger.warn("Invalid project status filter: {}", status);
+            }
+        }
+
+        // Create pageable with sorting
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        
+        // Get paginated and filtered projects
+        Page<Project> projectPage = projectRepository.findByOrganizationAndFilters(
+            user.getOrganization().getId(), 
+            categoryFilter, 
+            priorityFilter, 
+            statusFilter,
+            pageable
+        );
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("projects", projectPage.getContent());
+        response.put("currentPage", projectPage.getNumber());
+        response.put("totalItems", projectPage.getTotalElements());
+        response.put("totalPages", projectPage.getTotalPages());
+        response.put("hasNext", projectPage.hasNext());
+        response.put("hasPrevious", projectPage.hasPrevious());
+        
+        logger.info("Retrieved {} projects for user {} (page {} of {})", 
+                   projectPage.getContent().size(), username, page + 1, projectPage.getTotalPages());
+        
+        return response;
     }
 }

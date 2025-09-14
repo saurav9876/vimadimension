@@ -63,6 +63,7 @@ const Navbar = ({ user, onLogout }) => {
   };
   
   const toggleMobileMenu = () => {
+    console.log('Toggle mobile menu clicked. Current state:', isMobileMenuOpen);
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
   
@@ -108,6 +109,7 @@ const Navbar = ({ user, onLogout }) => {
           className="mobile-toggle-ultra" 
           onClick={toggleMobileMenu} 
           aria-label="Toggle menu"
+          type="button"
         >
           <div className={`hamburger-ultra ${isMobileMenuOpen ? 'active' : ''}`}>
             <span></span>
