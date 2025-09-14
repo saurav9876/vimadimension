@@ -48,3 +48,4 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
         }
     }
 }
+
