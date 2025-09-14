@@ -52,7 +52,7 @@ const TaskEditForm = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/admin/users', {
+      const response = await fetch('/api/tasks/users', {
         credentials: 'include'
       });
       
@@ -131,7 +131,7 @@ const TaskEditForm = () => {
       });
 
       if (response.ok) {
-        navigate(`/tasks/${id}/details`);
+        navigate(`/tasks/${id}/details`, { replace: true });
       } else {
         setError('Failed to update task');
       }
@@ -154,9 +154,9 @@ const TaskEditForm = () => {
           <button 
             type="button" 
             className="btn-outline"
-            onClick={() => navigate(`/tasks/${id}/details`)}
+            onClick={() => navigate(`/tasks/${id}/details`, { replace: true })}
           >
-            ← Back to Task
+            ← Back
           </button>
         </div>
       </div>
@@ -313,7 +313,7 @@ const TaskEditForm = () => {
             <button 
               type="button" 
               className="btn-secondary"
-              onClick={() => navigate(`/tasks/${id}/details`)}
+              onClick={() => navigate(`/tasks/${id}/details`, { replace: true })}
               disabled={submitting}
             >
               Cancel

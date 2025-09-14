@@ -96,7 +96,7 @@ const App = () => {
               <Route path="/profile" element={<UserProfile user={user} onUserUpdate={checkAuthStatus} />} />
               <Route path="/my-tasks" element={<MyTasks user={user} />} />
               <Route path="/projects" element={<ProjectsList user={user} />} />
-              <Route path="/projects/new" element={<CreateProject />} />
+              <Route path="/projects/new" element={<CreateProject user={user} />} />
               <Route path="/projects/:id/details" element={<ProjectDetails user={user} />} />
               <Route path="/projects/:id/edit" element={<EditProject user={user} />} />
               <Route path="/tasks/:id/details" element={<TaskDetails user={user} />} />

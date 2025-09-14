@@ -17,5 +17,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     
     // Organization-based queries - using correct JPA property path
     List<User> findByOrganization_Id(Long organizationId);
+    List<User> findByOrganization_IdAndEnabled(Long organizationId, boolean enabled);
     long countByOrganization_Id(Long organizationId);
 }

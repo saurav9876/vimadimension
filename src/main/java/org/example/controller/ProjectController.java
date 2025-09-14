@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/projects")
@@ -90,6 +91,37 @@ public class ProjectController {
         }
     }
 
+    @GetMapping("/paginated")
+    public ResponseEntity<Map<String, Object>> listProjectsPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "9") int size,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String priority,
+            @RequestParam(required = false) String status,
+            Authentication authentication) {
+        try {
+            if (authentication == null || !authentication.isAuthenticated()) {
+                logger.warn("Unauthenticated request to list paginated projects");
+                return ResponseEntity.status(401).build();
+            }
+            
+            String username = authentication.getName();
+            logger.info("Attempting to list paginated projects for user: {} (page: {}, size: {}, category: {}, priority: {}, status: {})", 
+                       username, page, size, category, priority, status);
+            
+            Map<String, Object> response = projectService.findProjectsPaginatedAndFiltered(
+                username, page, size, category, priority, status);
+            
+            logger.info("Successfully listed paginated projects for user {}. Found: {} projects on page {} of {}", 
+                       username, response.get("totalItems"), page + 1, response.get("totalPages"));
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error listing paginated projects: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to retrieve projects"));
+        }
+    }
+
     @GetMapping("/new")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> showCreateProjectForm() {
@@ -146,14 +178,20 @@ public class ProjectController {
         }
         Project project = projectOptional.get();
 
-        // Fetch and add tasks for this project
+        // Fetch and add tasks for this project with detailed information
         List<Task> tasks = taskService.getTasksByProjectId(projectId);
+        List<Map<String, Object>> taskResponses = new ArrayList<>();
+        
+        for (Task task : tasks) {
+            Map<String, Object> taskResponse = buildTaskResponse(task);
+            taskResponses.add(taskResponse);
+        }
 
         logger.debug("Displaying details for project ID: {} with {} tasks.", projectId, tasks.size());
         
         Map<String, Object> response = new HashMap<>();
         response.put("project", project);
-        response.put("tasks", tasks);
+        response.put("tasks", taskResponses);
         return ResponseEntity.ok(response);
     }
 
@@ -177,6 +215,9 @@ public class ProjectController {
         projectUpdateDto.setStatus(project.getStatus());
         projectUpdateDto.setProjectStage(project.getProjectStage());
         projectUpdateDto.setDescription(project.getDescription());
+        projectUpdateDto.setBudget(project.getBudget());
+        projectUpdateDto.setActualCost(project.getActualCost());
+        projectUpdateDto.setPriority(project.getPriority());
 
         logger.debug("Displaying edit form for project ID: {}", projectId);
         
@@ -271,5 +312,62 @@ public class ProjectController {
             logger.error("Error creating task for project ID {}: {}", projectId, e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+    
+    /**
+     * Helper method to build a task response with all related information
+     */
+    private Map<String, Object> buildTaskResponse(Task task) {
+        Map<String, Object> taskResponse = new HashMap<>();
+        taskResponse.put("id", task.getId());
+        taskResponse.put("name", task.getName());
+        taskResponse.put("description", task.getDescription());
+        taskResponse.put("status", task.getStatus());
+        taskResponse.put("projectStage", task.getProjectStage());
+        taskResponse.put("priority", task.getPriority());
+        taskResponse.put("dueDate", task.getDueDate());
+        taskResponse.put("createdAt", task.getCreatedAt());
+        taskResponse.put("updatedAt", task.getUpdatedAt());
+        
+        // Add project information
+        if (task.getProject() != null) {
+            Map<String, Object> projectInfo = new HashMap<>();
+            projectInfo.put("id", task.getProject().getId());
+            projectInfo.put("name", task.getProject().getName());
+            projectInfo.put("clientName", task.getProject().getClientName());
+            taskResponse.put("project", projectInfo);
+        }
+        
+        // Add assignee information
+        if (task.getAssignee() != null) {
+            Map<String, Object> assigneeInfo = new HashMap<>();
+            assigneeInfo.put("id", task.getAssignee().getId());
+            assigneeInfo.put("username", task.getAssignee().getUsername());
+            assigneeInfo.put("name", task.getAssignee().getName());
+            assigneeInfo.put("email", task.getAssignee().getEmail());
+            taskResponse.put("assignee", assigneeInfo);
+        }
+        
+        // Add reporter information
+        if (task.getReporter() != null) {
+            Map<String, Object> reporterInfo = new HashMap<>();
+            reporterInfo.put("id", task.getReporter().getId());
+            reporterInfo.put("username", task.getReporter().getUsername());
+            reporterInfo.put("name", task.getReporter().getName());
+            reporterInfo.put("email", task.getReporter().getEmail());
+            taskResponse.put("reporter", reporterInfo);
+        }
+        
+        // Add checked by information
+        if (task.getCheckedBy() != null) {
+            Map<String, Object> checkedByInfo = new HashMap<>();
+            checkedByInfo.put("id", task.getCheckedBy().getId());
+            checkedByInfo.put("username", task.getCheckedBy().getUsername());
+            checkedByInfo.put("name", task.getCheckedBy().getName());
+            checkedByInfo.put("email", task.getCheckedBy().getEmail());
+            taskResponse.put("checkedBy", checkedByInfo);
+        }
+        
+        return taskResponse;
     }
 }

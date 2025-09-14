@@ -309,91 +309,103 @@ const UserProfile = ({ user, onUserUpdate }) => {
   };
 
     return (
-      <div className="profile-container">
-        {/* Profile Header Section */}
-        <div className="profile-header">
+      <div className="modern-profile-container">
+        {/* Modern Profile Header */}
+        <div className="modern-profile-header">
           <div className="profile-avatar-section">
-            <div className="profile-avatar">
+            <div className="modern-profile-avatar">
               {user?.name?.charAt(0)?.toUpperCase() || user?.username?.charAt(0)?.toUpperCase() || 'U'}
             </div>
-            <div className="profile-basic-info">
-              <h1 className="profile-name">{user?.name || user?.username || 'User'}</h1>
+            <div className="profile-info">
+              <h1 className="modern-profile-name">{user?.name || user?.username || 'User'}</h1>
+              <p className="profile-username">@{user?.username || 'username'}</p>
               
-              {/* Professional Information in Header */}
-              <div className="profile-professional-info">
-                <div className="professional-item">
-                  <span className="prof-label">Designation:</span>
-                  <span className="prof-value">{user?.designation || 'Not set'}</span>
-                </div>
-                <div className="professional-item">
-                  <span className="prof-label">Specialization:</span>
-                  <span className="prof-value">{user?.specialization || 'Not set'}</span>
-                </div>
-                {user?.licenseNumber && (
-                  <div className="professional-item">
-                    <span className="prof-label">License:</span>
-                    <span className="prof-value">{user.licenseNumber}</span>
+              {/* Professional Information */}
+              <div className="profile-professional-badges">
+                {user?.designation && (
+                  <div className="professional-badge">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
+                    <span>{user.designation}</span>
                   </div>
                 )}
-                {user?.portfolioLink && (
-                  <div className="professional-item">
-                    <span className="prof-label">Portfolio:</span>
-                    <a href={user.portfolioLink} target="_blank" rel="noopener noreferrer" className="prof-link">
-                      View Portfolio
-                    </a>
+                {user?.specialization && (
+                  <div className="professional-badge">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span>{user.specialization}</span>
                   </div>
                 )}
               </div>
             </div>
           </div>
-          <div className="profile-actions">
+          
+          <div className="profile-actions-modern">
             <button 
-              className="btn-secondary"
+              className="btn-modern-secondary"
               onClick={() => setIsEditingProfile(true)}
             >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
               Edit Profile
             </button>
             <button 
-              className="btn-outline"
+              className="btn-modern-outline"
               onClick={() => setShowPasswordForm(true)}
             >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                <circle cx="12" cy="16" r="1" stroke="currentColor" strokeWidth="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" strokeWidth="2"/>
+              </svg>
               Change Password
             </button>
           </div>
         </div>
 
-        {/* Profile Content Grid */}
-        <div className="profile-content-grid">
+        {/* Modern Profile Content */}
+        <div className="modern-profile-content">
           {/* Personal Information Card */}
-          <div className="profile-card personal-info-card">
-            <div className="card-header">
-              <h3>Personal Information</h3>
+          <div className="modern-profile-card">
+            <div className="card-header-modern">
+              <div className="card-title-section">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+                </svg>
+                <h3>Personal Information</h3>
+              </div>
             </div>
-            <div className="card-content">
+            <div className="card-content-modern">
               {!isEditingProfile ? (
-                <div className="info-section">
-                  <div className="info-item">
-                    <label>Username</label>
-                    <span className="info-value">{user?.username || 'Not available'}</span>
+                <div className="info-grid-modern">
+                  <div className="info-item-modern">
+                    <div className="info-label-modern">Username</div>
+                    <div className="info-value-modern">{user?.username || 'Not available'}</div>
                   </div>
-                  <div className="info-item">
-                    <label>Full Name</label>
-                    <span className="info-value">{user?.name || 'Not set'}</span>
+                  <div className="info-item-modern">
+                    <div className="info-label-modern">Full Name</div>
+                    <div className="info-value-modern">{user?.name || 'Not set'}</div>
                   </div>
-                  <div className="info-item">
-                    <label>Email</label>
-                    <span className="info-value">{user?.email || 'Not set'}</span>
+                  <div className="info-item-modern">
+                    <div className="info-label-modern">Email</div>
+                    <div className="info-value-modern">{user?.email || 'Not set'}</div>
                   </div>
                   {user?.bio && (
-                    <div className="info-item bio-item">
-                      <label>Bio</label>
-                      <p className="bio-text">{user.bio}</p>
+                    <div className="info-item-modern bio-item-modern">
+                      <div className="info-label-modern">Bio</div>
+                      <div className="bio-text-modern">{user.bio}</div>
                     </div>
                   )}
                 </div>
               ) : (
-                <form onSubmit={handleProfileUpdate} className="profile-edit-form">
-                  <div className="form-group">
+                <form onSubmit={handleProfileUpdate} className="modern-profile-form">
+                  <div className="form-group-modern">
                     <label htmlFor="profileName">Full Name</label>
                     <input
                       type="text"
@@ -403,9 +415,10 @@ const UserProfile = ({ user, onUserUpdate }) => {
                       onChange={handleProfileInputChange}
                       required
                       placeholder="Enter your full name"
+                      className="modern-input"
                     />
                   </div>
-                  <div className="form-group">
+                  <div className="form-group-modern">
                     <label htmlFor="profileEmail">Email Address</label>
                     <input
                       type="email"
@@ -415,9 +428,10 @@ const UserProfile = ({ user, onUserUpdate }) => {
                       onChange={handleProfileInputChange}
                       required
                       placeholder="Enter your email address"
+                      className="modern-input"
                     />
                   </div>
-                  <div className="form-group">
+                  <div className="form-group-modern">
                     <label htmlFor="profileBio">Bio</label>
                     <textarea
                       id="profileBio"
@@ -426,26 +440,27 @@ const UserProfile = ({ user, onUserUpdate }) => {
                       onChange={handleProfileInputChange}
                       rows="4"
                       placeholder="Enter your bio (optional)"
+                      className="modern-textarea"
                     />
                   </div>
                   
                   {profileMessage && (
-                    <div className={`message ${profileMessage.type === 'error' ? 'error' : 'success'}`}>
+                    <div className={`modern-message ${profileMessage.type === 'error' ? 'error' : 'success'}`}>
                       {profileMessage.text}
                     </div>
                   )}
                   
-                  <div className="form-actions">
+                  <div className="form-actions-modern">
                     <button 
                       type="submit" 
-                      className="btn-primary"
+                      className="btn-modern-primary"
                       disabled={isUpdatingProfile}
                     >
                       {isUpdatingProfile ? 'Saving...' : 'Save Changes'}
                     </button>
                     <button 
                       type="button" 
-                      className="btn-outline"
+                      className="btn-modern-outline"
                       onClick={cancelProfileEdit}
                       disabled={isUpdatingProfile}
                     >
@@ -458,20 +473,26 @@ const UserProfile = ({ user, onUserUpdate }) => {
           </div>
 
           {/* Attendance Tracking Card */}
-          <div className="profile-card">
-            <div className="card-header">
-              <h3>Attendance Tracking</h3>
+          <div className="modern-profile-card">
+            <div className="card-header-modern">
+              <div className="card-title-section">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                  <polyline points="12,6 12,12 16,14" stroke="currentColor" strokeWidth="2"/>
+                </svg>
+                <h3>Attendance Tracking</h3>
+              </div>
             </div>
-            <div className="card-content">
-              <div className="attendance-status">
-                <div className="status-indicator">
-                  <div className={`status-dot ${attendanceStatus.isClockedIn ? 'active' : 'inactive'}`}></div>
-                  <div className="status-info">
-                    <span className="status-text">
+            <div className="card-content-modern">
+              <div className="attendance-status-modern">
+                <div className="status-indicator-modern">
+                  <div className={`status-dot-modern ${attendanceStatus.isClockedIn ? 'active' : 'inactive'}`}></div>
+                  <div className="status-info-modern">
+                    <span className="status-text-modern">
                       {attendanceStatus.isClockedIn ? 'Currently Clocked In' : 'Currently Clocked Out'}
                     </span>
                     {attendanceStatus.lastEntry && (
-                      <span className="last-entry-time">
+                      <span className="last-entry-time-modern">
                         Last {attendanceStatus.lastEntry.entryType === 'CLOCK_IN' ? 'clock in' : 'clock out'}: {' '}
                         {formatTime(attendanceStatus.lastEntry.timestamp)} on {formatDate(attendanceStatus.lastEntry.timestamp)}
                       </span>
@@ -479,12 +500,16 @@ const UserProfile = ({ user, onUserUpdate }) => {
                   </div>
                 </div>
                 
-                <div className="attendance-actions">
+                <div className="attendance-actions-modern">
                   <button
                     onClick={handleClockIn}
                     disabled={attendanceStatus.loading || attendanceStatus.hasClockedInToday || attendanceStatus.hasClockedOutToday}
-                    className={`btn-attendance clock-in ${attendanceStatus.hasClockedInToday || attendanceStatus.hasClockedOutToday ? 'disabled' : ''}`}
+                    className={`btn-attendance-modern clock-in ${attendanceStatus.hasClockedInToday || attendanceStatus.hasClockedOutToday ? 'disabled' : ''}`}
                   >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                      <polyline points="12,6 12,12 16,14" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
                     {attendanceStatus.loading ? 'Processing...' : 
                      attendanceStatus.hasClockedInToday ? 'Already Clocked In' :
                      attendanceStatus.hasClockedOutToday ? 'Already Clocked Out' : 'Clock In'}
@@ -492,8 +517,12 @@ const UserProfile = ({ user, onUserUpdate }) => {
                   <button
                     onClick={handleClockOut}
                     disabled={attendanceStatus.loading || !attendanceStatus.hasClockedInToday || attendanceStatus.hasClockedOutToday}
-                    className={`btn-attendance clock-out ${!attendanceStatus.hasClockedInToday || attendanceStatus.hasClockedOutToday ? 'disabled' : ''}`}
+                    className={`btn-attendance-modern clock-out ${!attendanceStatus.hasClockedInToday || attendanceStatus.hasClockedOutToday ? 'disabled' : ''}`}
                   >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <rect x="6" y="6" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="2"/>
+                      <path d="M9 9h6v6H9z" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
                     {attendanceStatus.loading ? 'Processing...' : 
                      !attendanceStatus.hasClockedInToday ? 'Clock In First' :
                      attendanceStatus.hasClockedOutToday ? 'Already Clocked Out' : 'Clock Out'}
@@ -502,7 +531,7 @@ const UserProfile = ({ user, onUserUpdate }) => {
               </div>
 
               {attendanceMessage && (
-                <div className={`message ${attendanceMessage.type === 'error' ? 'error' : 'success'}`}>
+                <div className={`modern-message ${attendanceMessage.type === 'error' ? 'error' : 'success'}`}>
                   {attendanceMessage.text}
                 </div>
               )}

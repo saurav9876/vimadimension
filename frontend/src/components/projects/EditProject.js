@@ -89,8 +89,8 @@ const EditProject = ({ user }) => {
             status: dto.status || '',
             projectStage: dto.projectStage || '',
             description: dto.description || '',
-            budget: dto.budget || '',
-            actualCost: dto.actualCost || '',
+            budget: dto.budget ? dto.budget.toString() : '',
+            actualCost: dto.actualCost ? dto.actualCost.toString() : '',
             priority: dto.priority || ''
           });
         }
@@ -308,37 +308,39 @@ const EditProject = ({ user }) => {
             </div>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="budget">Budget:</label>
-              <input
-                type="number"
-                id="budget"
-                name="budget"
-                value={formData.budget}
-                onChange={handleChange}
-                placeholder="0.00"
-                step="0.01"
-                min="0"
-              />
-              <small className="form-help">Enter budget amount (optional)</small>
-            </div>
+          {isAdmin && (
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="budget">Budget (₹):</label>
+                <input
+                  type="number"
+                  id="budget"
+                  name="budget"
+                  value={formData.budget}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                />
+                <small className="form-help">Enter budget amount in Indian Rupees (optional)</small>
+              </div>
 
-            <div className="form-group">
-              <label htmlFor="actualCost">Actual Cost:</label>
-              <input
-                type="number"
-                id="actualCost"
-                name="actualCost"
-                value={formData.actualCost}
-                onChange={handleChange}
-                placeholder="0.00"
-                step="0.01"
-                min="0"
-              />
-              <small className="form-help">Enter actual cost (optional)</small>
+              <div className="form-group">
+                <label htmlFor="actualCost">Actual Cost (₹):</label>
+                <input
+                  type="number"
+                  id="actualCost"
+                  name="actualCost"
+                  value={formData.actualCost}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                />
+                <small className="form-help">Enter actual cost in Indian Rupees (optional)</small>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="description">Description:</label>

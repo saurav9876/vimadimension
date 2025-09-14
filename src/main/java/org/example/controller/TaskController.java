@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -137,6 +138,19 @@ public class TaskController {
             @RequestParam(defaultValue = "10") int size) {
         try {
             Map<String, Object> response = taskService.getAllTasksPaginated(page, size);
+            
+            // Convert tasks to include assignee and checkedBy information
+            @SuppressWarnings("unchecked")
+            List<Task> tasks = (List<Task>) response.get("tasks");
+            List<Map<String, Object>> taskResponses = new ArrayList<>();
+            
+            for (Task task : tasks) {
+                Map<String, Object> taskResponse = buildTaskResponse(task);
+                taskResponses.add(taskResponse);
+            }
+            
+            response.put("tasks", taskResponses);
+            
             logger.info("Retrieved paginated tasks - page: {}, size: {}, total: {}", 
                        page, size, response.get("totalElements"));
             return ResponseEntity.ok(response);
@@ -148,11 +162,18 @@ public class TaskController {
 
     @GetMapping("/assigned-to-me")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<Task>> getTasksAssignedToCurrentUser() {
+    public ResponseEntity<List<Map<String, Object>>> getTasksAssignedToCurrentUser() {
         try {
             List<Task> tasks = taskService.getTasksAssignedToCurrentUser();
+            List<Map<String, Object>> taskResponses = new ArrayList<>();
+            
+            for (Task task : tasks) {
+                Map<String, Object> taskResponse = buildTaskResponse(task);
+                taskResponses.add(taskResponse);
+            }
+            
             logger.info("Retrieved {} tasks assigned to current user", tasks.size());
-            return ResponseEntity.ok(tasks);
+            return ResponseEntity.ok(taskResponses);
         } catch (Exception e) {
             logger.error("Error retrieving tasks assigned to current user: {}", e.getMessage(), e);
             throw e;
@@ -161,11 +182,18 @@ public class TaskController {
 
     @GetMapping("/reported-by-me")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<Task>> getTasksReportedByCurrentUser() {
+    public ResponseEntity<List<Map<String, Object>>> getTasksReportedByCurrentUser() {
         try {
             List<Task> tasks = taskService.getTasksReportedByCurrentUser();
+            List<Map<String, Object>> taskResponses = new ArrayList<>();
+            
+            for (Task task : tasks) {
+                Map<String, Object> taskResponse = buildTaskResponse(task);
+                taskResponses.add(taskResponse);
+            }
+            
             logger.info("Retrieved {} tasks reported by current user", tasks.size());
-            return ResponseEntity.ok(tasks);
+            return ResponseEntity.ok(taskResponses);
         } catch (Exception e) {
             logger.error("Error retrieving tasks reported by current user: {}", e.getMessage(), e);
             throw e;
@@ -174,11 +202,18 @@ public class TaskController {
 
     @GetMapping("/to-check")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<Task>> getTasksToCheckByCurrentUser() {
+    public ResponseEntity<List<Map<String, Object>>> getTasksToCheckByCurrentUser() {
         try {
             List<Task> tasks = taskService.getTasksToCheckByCurrentUser();
+            List<Map<String, Object>> taskResponses = new ArrayList<>();
+            
+            for (Task task : tasks) {
+                Map<String, Object> taskResponse = buildTaskResponse(task);
+                taskResponses.add(taskResponse);
+            }
+            
             logger.info("Retrieved {} tasks to check by current user", tasks.size());
-            return ResponseEntity.ok(tasks);
+            return ResponseEntity.ok(taskResponses);
         } catch (Exception e) {
             logger.error("Error retrieving tasks to check by current user: {}", e.getMessage(), e);
             throw e;
@@ -371,4 +406,136 @@ public class TaskController {
             return ResponseEntity.status(500).body(java.util.Map.of("success", false, "error", "Internal server error"));
         }
     }
+
+    @PostMapping("/create-standalone")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> createStandaloneTask(@RequestParam("name") String name,
+                                                @RequestParam(value = "description", required = false) String description,
+                                                @RequestParam(value = "priority", required = false) String priority,
+                                                @RequestParam(value = "dueDate", required = false) String dueDate,
+                                                @RequestParam("assigneeId") String assigneeId,
+                                                @RequestParam("checkedById") String checkedById) {
+        try {
+            logger.info("Creating standalone task: name='{}'", name);
+            
+            // Convert assigneeId to Long (required)
+            Long assigneeIdLong = Long.valueOf(assigneeId);
+            
+            // Convert checkedById to Long (required)
+            Long checkedByIdLong = Long.valueOf(checkedById);
+            
+            // Use a default project stage for standalone tasks
+            org.example.models.enums.ProjectStage projectStageEnum = org.example.models.enums.ProjectStage.STAGE_01_PREPARATION_BRIEF;
+            
+            // Create the task without a project (projectId = null)
+            taskService.createTask(
+                name,
+                description,
+                projectStageEnum,
+                null, // No project for standalone tasks
+                Optional.of(assigneeIdLong),
+                Optional.of(checkedByIdLong)
+            );
+            
+            logger.info("Standalone task created successfully: '{}'", name);
+            return ResponseEntity.ok(Map.of("message", "Task created successfully!"));
+            
+        } catch (IllegalArgumentException e) {
+            logger.error("Error creating standalone task: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Unexpected error creating standalone task: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("error", "Internal server error"));
+        }
+    }
+
+    @GetMapping("/users")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getUsersForTaskAssignment() {
+        try {
+            // Get users for task assignment from the same organization as current user
+            // This endpoint is accessible to all authenticated users
+            List<org.example.models.User> users = taskService.getAllUsersForTaskAssignment();
+            
+            List<Map<String, Object>> userList = users.stream()
+                .map(user -> {
+                    Map<String, Object> userMap = new HashMap<>();
+                    userMap.put("id", user.getId());
+                    userMap.put("username", user.getUsername());
+                    userMap.put("name", user.getName() != null ? user.getName() : user.getUsername());
+                    userMap.put("email", user.getEmail());
+                    return userMap;
+                })
+                .collect(java.util.stream.Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "users", userList
+            ));
+        } catch (IllegalStateException e) {
+            logger.error("User organization error: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error fetching users for task assignment: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to fetch users"));
+        }
+    }
+    
+    /**
+     * Helper method to build a task response with all related information
+     */
+    private Map<String, Object> buildTaskResponse(Task task) {
+        Map<String, Object> taskResponse = new HashMap<>();
+        taskResponse.put("id", task.getId());
+        taskResponse.put("name", task.getName());
+        taskResponse.put("description", task.getDescription());
+        taskResponse.put("status", task.getStatus());
+        taskResponse.put("projectStage", task.getProjectStage());
+        taskResponse.put("priority", task.getPriority());
+        taskResponse.put("dueDate", task.getDueDate());
+        taskResponse.put("createdAt", task.getCreatedAt());
+        taskResponse.put("updatedAt", task.getUpdatedAt());
+        
+        // Add project information
+        if (task.getProject() != null) {
+            Map<String, Object> projectInfo = new HashMap<>();
+            projectInfo.put("id", task.getProject().getId());
+            projectInfo.put("name", task.getProject().getName());
+            projectInfo.put("clientName", task.getProject().getClientName());
+            taskResponse.put("project", projectInfo);
+        }
+        
+        // Add assignee information
+        if (task.getAssignee() != null) {
+            Map<String, Object> assigneeInfo = new HashMap<>();
+            assigneeInfo.put("id", task.getAssignee().getId());
+            assigneeInfo.put("username", task.getAssignee().getUsername());
+            assigneeInfo.put("name", task.getAssignee().getName());
+            assigneeInfo.put("email", task.getAssignee().getEmail());
+            taskResponse.put("assignee", assigneeInfo);
+        }
+        
+        // Add reporter information
+        if (task.getReporter() != null) {
+            Map<String, Object> reporterInfo = new HashMap<>();
+            reporterInfo.put("id", task.getReporter().getId());
+            reporterInfo.put("username", task.getReporter().getUsername());
+            reporterInfo.put("name", task.getReporter().getName());
+            reporterInfo.put("email", task.getReporter().getEmail());
+            taskResponse.put("reporter", reporterInfo);
+        }
+        
+        // Add checked by information
+        if (task.getCheckedBy() != null) {
+            Map<String, Object> checkedByInfo = new HashMap<>();
+            checkedByInfo.put("id", task.getCheckedBy().getId());
+            checkedByInfo.put("username", task.getCheckedBy().getUsername());
+            checkedByInfo.put("name", task.getCheckedBy().getName());
+            checkedByInfo.put("email", task.getCheckedBy().getEmail());
+            taskResponse.put("checkedBy", checkedByInfo);
+        }
+        
+        return taskResponse;
+    }
+
 }

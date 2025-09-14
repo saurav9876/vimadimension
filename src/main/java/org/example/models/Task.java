@@ -43,7 +43,7 @@ public class Task {
     private LocalDate dueDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "project_id", nullable = false)
+    @JoinColumn(name = "project_id", nullable = true)
     @JsonIgnore // Prevent Hibernate proxy serialization issues
     private Project project;
 
