@@ -152,7 +152,7 @@ public class TaskController {
             response.put("tasks", taskResponses);
             
             logger.info("Retrieved paginated tasks - page: {}, size: {}, total: {}", 
-                       page, size, response.get("totalElements"));
+                       page, size, response.get("totalItems"));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error retrieving paginated tasks: {}", e.getMessage(), e);
@@ -162,18 +162,26 @@ public class TaskController {
 
     @GetMapping("/assigned-to-me")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<Map<String, Object>>> getTasksAssignedToCurrentUser() {
+    public ResponseEntity<Map<String, Object>> getTasksAssignedToCurrentUser(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         try {
-            List<Task> tasks = taskService.getTasksAssignedToCurrentUser();
+            Map<String, Object> response = taskService.getTasksAssignedToCurrentUserPaginated(page, size);
+
+            @SuppressWarnings("unchecked")
+            List<Task> tasks = (List<Task>) response.get("tasks");
             List<Map<String, Object>> taskResponses = new ArrayList<>();
-            
+
             for (Task task : tasks) {
                 Map<String, Object> taskResponse = buildTaskResponse(task);
                 taskResponses.add(taskResponse);
             }
-            
-            logger.info("Retrieved {} tasks assigned to current user", tasks.size());
-            return ResponseEntity.ok(taskResponses);
+
+            response.put("tasks", taskResponses);
+
+            logger.info("Retrieved paginated tasks assigned to current user - page: {}, size: {}, total: {}",
+                    page, size, response.get("totalItems"));
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error retrieving tasks assigned to current user: {}", e.getMessage(), e);
             throw e;
@@ -182,18 +190,26 @@ public class TaskController {
 
     @GetMapping("/reported-by-me")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<Map<String, Object>>> getTasksReportedByCurrentUser() {
+    public ResponseEntity<Map<String, Object>> getTasksReportedByCurrentUser(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         try {
-            List<Task> tasks = taskService.getTasksReportedByCurrentUser();
+            Map<String, Object> response = taskService.getTasksReportedByCurrentUserPaginated(page, size);
+
+            @SuppressWarnings("unchecked")
+            List<Task> tasks = (List<Task>) response.get("tasks");
             List<Map<String, Object>> taskResponses = new ArrayList<>();
-            
+
             for (Task task : tasks) {
                 Map<String, Object> taskResponse = buildTaskResponse(task);
                 taskResponses.add(taskResponse);
             }
-            
-            logger.info("Retrieved {} tasks reported by current user", tasks.size());
-            return ResponseEntity.ok(taskResponses);
+
+            response.put("tasks", taskResponses);
+
+            logger.info("Retrieved paginated tasks reported by current user - page: {}, size: {}, total: {}",
+                    page, size, response.get("totalItems"));
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error retrieving tasks reported by current user: {}", e.getMessage(), e);
             throw e;
@@ -202,18 +218,26 @@ public class TaskController {
 
     @GetMapping("/to-check")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<Map<String, Object>>> getTasksToCheckByCurrentUser() {
+    public ResponseEntity<Map<String, Object>> getTasksToCheckByCurrentUser(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         try {
-            List<Task> tasks = taskService.getTasksToCheckByCurrentUser();
+            Map<String, Object> response = taskService.getTasksToCheckByCurrentUserPaginated(page, size);
+
+            @SuppressWarnings("unchecked")
+            List<Task> tasks = (List<Task>) response.get("tasks");
             List<Map<String, Object>> taskResponses = new ArrayList<>();
-            
+
             for (Task task : tasks) {
                 Map<String, Object> taskResponse = buildTaskResponse(task);
                 taskResponses.add(taskResponse);
             }
-            
-            logger.info("Retrieved {} tasks to check by current user", tasks.size());
-            return ResponseEntity.ok(taskResponses);
+
+            response.put("tasks", taskResponses);
+
+            logger.info("Retrieved paginated tasks to check by current user - page: {}, size: {}, total: {}",
+                    page, size, response.get("totalItems"));
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error retrieving tasks to check by current user: {}", e.getMessage(), e);
             throw e;

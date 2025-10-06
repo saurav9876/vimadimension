@@ -128,16 +128,7 @@ public class TaskService {
     public Map<String, Object> getAllTasksPaginated(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("updatedAt").descending());
         Page<Task> taskPage = taskRepository.findAll(pageable);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("tasks", taskPage.getContent());
-        response.put("currentPage", taskPage.getNumber());
-        response.put("totalItems", taskPage.getTotalElements());
-        response.put("totalPages", taskPage.getTotalPages());
-        response.put("hasNext", taskPage.hasNext());
-        response.put("hasPrevious", taskPage.hasPrevious());
-        
-        return response;
+        return buildPaginatedTaskResponse(taskPage);
     }
 
     /**
@@ -163,6 +154,35 @@ public class TaskService {
         return taskRepository.findByProjectId(projectId);
     }
 
+    public Map<String, Object> getTasksByProjectIdPaginated(Long projectId, int page, int size) {
+        if (projectId == null) {
+            throw new IllegalArgumentException("Project ID cannot be null.");
+        }
+        if (page < 0) {
+            throw new IllegalArgumentException("Page index cannot be negative.");
+        }
+        if (size <= 0) {
+            throw new IllegalArgumentException("Page size must be greater than zero.");
+        }
+
+        if (!projectRepository.existsById(projectId)) {
+            throw new IllegalArgumentException("Project with ID " + projectId + " not found.");
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("updatedAt").descending());
+        Page<Task> taskPage = taskRepository.findByProjectId(projectId, pageable);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("tasks", taskPage.getContent());
+        response.put("currentPage", taskPage.getNumber());
+        response.put("pageSize", taskPage.getSize());
+        response.put("totalItems", taskPage.getTotalElements());
+        response.put("totalPages", taskPage.getTotalPages());
+        response.put("hasNext", taskPage.hasNext());
+        response.put("hasPrevious", taskPage.hasPrevious());
+        return response;
+    }
+
     public List<Task> getTasksByAssigneeId(Long assigneeId) {
         User assignee = userRepository.findById(assigneeId)
                 .orElseThrow(() -> new IllegalArgumentException("Assignee user with ID " + assigneeId + " not found."));
@@ -174,14 +194,50 @@ public class TaskService {
         return taskRepository.findByAssigneeAndStatusNotIn(currentUser, Arrays.asList(TaskStatus.DONE, TaskStatus.CHECKED));
     }
 
+    public Map<String, Object> getTasksAssignedToCurrentUserPaginated(int page, int size) {
+        validatePaginationInputs(page, size);
+        User currentUser = getCurrentAuthenticatedUser();
+        Pageable pageable = PageRequest.of(page, size, Sort.by("updatedAt").descending());
+        Page<Task> taskPage = taskRepository.findByAssigneeAndStatusNotIn(
+                currentUser,
+                Arrays.asList(TaskStatus.DONE, TaskStatus.CHECKED),
+                pageable
+        );
+        return buildPaginatedTaskResponse(taskPage);
+    }
+
     public List<Task> getTasksReportedByCurrentUser() {
         User currentUser = getCurrentAuthenticatedUser();
         return taskRepository.findByReporterAndStatusNotIn(currentUser, Arrays.asList(TaskStatus.DONE, TaskStatus.CHECKED));
     }
 
+    public Map<String, Object> getTasksReportedByCurrentUserPaginated(int page, int size) {
+        validatePaginationInputs(page, size);
+        User currentUser = getCurrentAuthenticatedUser();
+        Pageable pageable = PageRequest.of(page, size, Sort.by("updatedAt").descending());
+        Page<Task> taskPage = taskRepository.findByReporterAndStatusNotIn(
+                currentUser,
+                Arrays.asList(TaskStatus.DONE, TaskStatus.CHECKED),
+                pageable
+        );
+        return buildPaginatedTaskResponse(taskPage);
+    }
+
     public List<Task> getTasksToCheckByCurrentUser() {
         User currentUser = getCurrentAuthenticatedUser();
         return taskRepository.findByCheckedByAndStatus(currentUser, TaskStatus.DONE);
+    }
+
+    public Map<String, Object> getTasksToCheckByCurrentUserPaginated(int page, int size) {
+        validatePaginationInputs(page, size);
+        User currentUser = getCurrentAuthenticatedUser();
+        Pageable pageable = PageRequest.of(page, size, Sort.by("updatedAt").descending());
+        Page<Task> taskPage = taskRepository.findByCheckedByAndStatus(
+                currentUser,
+                TaskStatus.DONE,
+                pageable
+        );
+        return buildPaginatedTaskResponse(taskPage);
     }
 
 
@@ -287,6 +343,27 @@ public class TaskService {
 
         // updatedAt is handled by @PreUpdate in Task entity
         return taskRepository.save(taskToUpdate);
+    }
+
+    private void validatePaginationInputs(int page, int size) {
+        if (page < 0) {
+            throw new IllegalArgumentException("Page index cannot be negative.");
+        }
+        if (size <= 0) {
+            throw new IllegalArgumentException("Page size must be greater than zero.");
+        }
+    }
+
+    private Map<String, Object> buildPaginatedTaskResponse(Page<Task> taskPage) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("tasks", taskPage.getContent());
+        response.put("currentPage", taskPage.getNumber());
+        response.put("pageSize", taskPage.getSize());
+        response.put("totalItems", taskPage.getTotalElements());
+        response.put("totalPages", taskPage.getTotalPages());
+        response.put("hasNext", taskPage.hasNext());
+        response.put("hasPrevious", taskPage.hasPrevious());
+        return response;
     }
 
     @Transactional

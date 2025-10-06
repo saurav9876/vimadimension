@@ -93,7 +93,7 @@ if %ERRORLEVEL% equ 0 (
 
 REM Install Backend as Windows service
 "%NSSM_PATH%" install %SERVICE_NAME_BACKEND% "java"
-"%NSSM_PATH%" set %SERVICE_NAME_BACKEND% AppParameters "-Xms256m -Xmx1024m -Dspring.profiles.active=prod -jar \"%JAR_PATH%\""
+"%NSSM_PATH%" set %SERVICE_NAME_BACKEND% AppParameters "-Xms1024m -Xmx2048m -Dspring.profiles.active=prod -jar \"%JAR_PATH%\""
 "%NSSM_PATH%" set %SERVICE_NAME_BACKEND% AppDirectory "%~dp0.."
 "%NSSM_PATH%" set %SERVICE_NAME_BACKEND% DisplayName "VimaDimension Backend"
 "%NSSM_PATH%" set %SERVICE_NAME_BACKEND% Description "Spring Boot Backend for VimaDimension Application"

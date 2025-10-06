@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+
+const PAGE_SIZE = 12;
 
 const ProjectDetails = ({ user }) => {
   const { id } = useParams();
@@ -8,26 +10,70 @@ const ProjectDetails = ({ user }) => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(0);
+  const [pagination, setPagination] = useState({
+    currentPage: 0,
+    pageSize: PAGE_SIZE,
+    totalItems: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrevious: false,
+  });
+  const prevProjectIdRef = useRef(id);
+
+  const totalTasks = pagination.totalItems ?? tasks.length;
+  const isTaskListEmpty = totalTasks === 0;
+  const showPagination = !isTaskListEmpty && pagination.totalPages > 1;
 
   // Check if user has admin role
   const isAdmin = user?.authorities?.some(auth => auth.authority === 'ROLE_ADMIN') || false;
 
   useEffect(() => {
-    fetchProjectDetails();
-  }, [id]);
+    let pageToLoad = page;
+    if (prevProjectIdRef.current !== id) {
+      prevProjectIdRef.current = id;
+      if (page !== 0) {
+        setPage(0);
+        return;
+      }
+      pageToLoad = 0;
+    }
+    fetchProjectDetails(pageToLoad);
+  }, [id, page]);
 
-  const fetchProjectDetails = async () => {
+  const fetchProjectDetails = async (pageToLoad = 0) => {
     try {
-      const response = await fetch(`/api/projects/${id}/details`, {
+      setLoading(true);
+      setError('');
+      const response = await fetch(`/api/projects/${id}/details?page=${pageToLoad}&size=${PAGE_SIZE}`, {
         credentials: 'include'
       });
       
       if (response.ok) {
         const data = await response.json();
         setProject(data.project);
-        setTasks(data.tasks || []);
+        const taskList = data.tasks || [];
+        setTasks(taskList);
+        const paginationPayload = data.taskPagination || {};
+        const normalizedPagination = {
+          currentPage: typeof paginationPayload.currentPage === 'number' ? paginationPayload.currentPage : pageToLoad,
+          pageSize: typeof paginationPayload.pageSize === 'number' ? paginationPayload.pageSize : PAGE_SIZE,
+          totalItems: typeof paginationPayload.totalItems === 'number' ? paginationPayload.totalItems : taskList.length,
+          totalPages: typeof paginationPayload.totalPages === 'number' ? paginationPayload.totalPages : (taskList.length > 0 ? 1 : 0),
+          hasNext: Boolean(paginationPayload.hasNext),
+          hasPrevious: Boolean(paginationPayload.hasPrevious),
+        };
+        setPagination(normalizedPagination);
+        if (normalizedPagination.currentPage !== pageToLoad) {
+          setPage(prev => (prev === normalizedPagination.currentPage ? prev : normalizedPagination.currentPage));
+        }
       } else {
-        setError('Project not found');
+        if (response.status === 404) {
+          setError('Project not found');
+        } else {
+          const errorData = await response.json().catch(() => null);
+          setError(errorData?.error || errorData?.message || 'Failed to load project details');
+        }
       }
     } catch (error) {
       console.error('Error fetching project details:', error);
@@ -73,7 +119,7 @@ const ProjectDetails = ({ user }) => {
   };
 
   const handleDeleteProject = async () => {
-    const taskCount = tasks.length;
+    const taskCount = totalTasks;
     let confirmMessage = 'Are you sure you want to delete this project? This action cannot be undone.';
     
     if (taskCount > 0) {
@@ -113,8 +159,13 @@ const ProjectDetails = ({ user }) => {
         });
 
         if (response.ok) {
-          // Remove the task from the local state
-          setTasks(tasks.filter(task => task.id !== taskId));
+          const isLastItemOnPage = tasks.length === 1;
+          const targetPage = isLastItemOnPage && page > 0 ? page - 1 : page;
+          if (targetPage === page) {
+            fetchProjectDetails(page);
+          } else {
+            setPage(targetPage);
+          }
         } else {
           // Try to get the error message from the response
           const errorData = await response.json().catch(() => null);
@@ -144,6 +195,18 @@ const ProjectDetails = ({ user }) => {
     );
   };
 
+  const goToPreviousPage = () => {
+    if (pagination.hasPrevious) {
+      setPage(prev => Math.max(prev - 1, 0));
+    }
+  };
+
+  const goToNextPage = () => {
+    if (pagination.hasNext) {
+      setPage(prev => prev + 1);
+    }
+  };
+
   if (loading) return <div className="main-content">Loading...</div>;
   if (error) return <div className="main-content"><div className="alert alert-danger">{error}</div></div>;
   if (!project) return <div className="main-content">Project not found</div>;
@@ -166,8 +229,8 @@ const ProjectDetails = ({ user }) => {
               <button 
                 onClick={handleDeleteProject}
                 className="btn-danger"
-                disabled={tasks.length > 0}
-                title={tasks.length > 0 ? `Cannot delete project with ${tasks.length} task${tasks.length > 1 ? 's' : ''}. Delete or reassign tasks first.` : "Delete this project permanently"}
+                disabled={totalTasks > 0}
+                title={totalTasks > 0 ? `Cannot delete project with ${totalTasks} task${totalTasks > 1 ? 's' : ''}. Delete or reassign tasks first.` : "Delete this project permanently"}
               >
                 Delete Project
               </button>
@@ -259,13 +322,13 @@ const ProjectDetails = ({ user }) => {
       {/* Modern Tasks Section */}
       <div className="modern-tasks-section">
         <div className="tasks-header">
-          <h2>Project Tasks ({tasks.length})</h2>
+          <h2>Project Tasks ({totalTasks})</h2>
           <Link to={`/projects/${id}/tasks/new`} className="btn-primary btn-add-task">
             + Add New Task
           </Link>
         </div>
 
-        {tasks.length === 0 ? (
+        {isTaskListEmpty ? (
           <div className="empty-state">
             <span className="empty-icon">📋</span>
             <h3>No tasks yet</h3>
@@ -430,6 +493,29 @@ const ProjectDetails = ({ user }) => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {showPagination && (
+          <div className="task-pagination">
+            <button 
+              type="button"
+              className="btn-pagination prev"
+              onClick={goToPreviousPage}
+              disabled={!pagination.hasPrevious}
+            >
+              ← Previous
+            </button>
+            <span className="pagination-status">
+              Page {pagination.currentPage + 1} of {pagination.totalPages}
+            </span>
+            <button 
+              type="button"
+              className="btn-pagination next"
+              onClick={goToNextPage}
+              disabled={!pagination.hasNext}
+            >
+              Next →
+            </button>
           </div>
         )}
       </div>

@@ -1,3 +1,5 @@
+import org.springframework.boot.gradle.tasks.run.BootRun
+
 plugins {
     id("java")
     id("org.springframework.boot") version "3.4.0"
@@ -43,4 +45,9 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.withType<BootRun>().configureEach {
+    // Ensure local runs have enough heap for heavier workloads
+    jvmArgs("-Xms1g", "-Xmx2g")
 }
