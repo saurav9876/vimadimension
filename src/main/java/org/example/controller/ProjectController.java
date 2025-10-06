@@ -170,7 +170,9 @@ public class ProjectController {
     }
 
     @GetMapping("/{id}/details")
-    public ResponseEntity<?> showProjectDetails(@PathVariable("id") Long projectId) {
+    public ResponseEntity<?> showProjectDetails(@PathVariable("id") Long projectId,
+                                                @RequestParam(defaultValue = "0") int page,
+                                                @RequestParam(defaultValue = "12") int size) {
         Optional<Project> projectOptional = projectService.findById(projectId);
         if (projectOptional.isEmpty()) {
             logger.warn("Attempted to view details for non-existent project ID: {}", projectId);
@@ -179,7 +181,18 @@ public class ProjectController {
         Project project = projectOptional.get();
 
         // Fetch and add tasks for this project with detailed information
-        List<Task> tasks = taskService.getTasksByProjectId(projectId);
+        Map<String, Object> paginatedTasks;
+        try {
+            paginatedTasks = taskService.getTasksByProjectIdPaginated(projectId, page, size);
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Invalid pagination parameters for project {} details: {}", projectId, ex.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", ex.getMessage(),
+                    "projectId", projectId
+            ));
+        }
+        @SuppressWarnings("unchecked")
+        List<Task> tasks = (List<Task>) paginatedTasks.getOrDefault("tasks", List.of());
         List<Map<String, Object>> taskResponses = new ArrayList<>();
         
         for (Task task : tasks) {
@@ -187,11 +200,15 @@ public class ProjectController {
             taskResponses.add(taskResponse);
         }
 
-        logger.debug("Displaying details for project ID: {} with {} tasks.", projectId, tasks.size());
+        long totalItems = ((Number) paginatedTasks.getOrDefault("totalItems", tasks.size())).longValue();
+        logger.debug("Displaying details for project ID: {} with {} tasks (page {}).", projectId, totalItems, paginatedTasks.getOrDefault("currentPage", page));
         
         Map<String, Object> response = new HashMap<>();
         response.put("project", project);
         response.put("tasks", taskResponses);
+        Map<String, Object> paginationMetadata = new HashMap<>(paginatedTasks);
+        paginationMetadata.remove("tasks");
+        response.put("taskPagination", paginationMetadata);
         return ResponseEntity.ok(response);
     }
 

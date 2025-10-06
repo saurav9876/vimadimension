@@ -2,9 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 const MyTasks = ({ user }) => {
+  const createInitialPagination = (pageSize = 10) => ({
+    currentPage: 0,
+    totalPages: 0,
+    totalItems: 0,
+    hasNext: false,
+    hasPrevious: false,
+    pageSize
+  });
+
   const [assignedTasks, setAssignedTasks] = useState([]);
+  const [assignedPagination, setAssignedPagination] = useState(() => createInitialPagination());
   const [reportedTasks, setReportedTasks] = useState([]);
+  const [reportedPagination, setReportedPagination] = useState(() => createInitialPagination());
   const [tasksToCheck, setTasksToCheck] = useState([]);
+  const [toCheckPagination, setToCheckPagination] = useState(() => createInitialPagination());
   const [allTasks, setAllTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -12,14 +24,99 @@ const MyTasks = ({ user }) => {
   const [showStandaloneForm, setShowStandaloneForm] = useState(false);
   
   // Pagination state for All Tasks tab
-  const [allTasksPagination, setAllTasksPagination] = useState({
-    currentPage: 0,
-    totalPages: 0,
-    totalItems: 0,
-    hasNext: false,
-    hasPrevious: false,
-    pageSize: 10
+  const [allTasksPagination, setAllTasksPagination] = useState(() => createInitialPagination());
+
+  const fetchPaginatedTaskList = async ({ endpoint, page, pageSize, setTasks, setPagination }) => {
+    try {
+      const response = await fetch(`${endpoint}?page=${page}&size=${pageSize}`, {
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        console.error(`Failed to load tasks from ${endpoint}:`, response.statusText);
+        return false;
+      }
+
+      const data = await response.json();
+
+      setTasks(data.tasks || []);
+      setPagination({
+        currentPage: data.currentPage ?? page,
+        totalPages: data.totalPages ?? 0,
+        totalItems: data.totalItems ?? 0,
+        hasNext: data.hasNext ?? false,
+        hasPrevious: data.hasPrevious ?? false,
+        pageSize: data.pageSize ?? pageSize
+      });
+
+      return true;
+    } catch (error) {
+      console.error(`Error fetching tasks from ${endpoint}:`, error);
+      return false;
+    }
+  };
+
+  const fetchAssignedTasksPaginated = async (page = 0) => fetchPaginatedTaskList({
+    endpoint: '/api/tasks/assigned-to-me',
+    page,
+    pageSize: assignedPagination.pageSize,
+    setTasks: setAssignedTasks,
+    setPagination: setAssignedPagination
   });
+
+  const fetchReportedTasksPaginated = async (page = 0) => fetchPaginatedTaskList({
+    endpoint: '/api/tasks/reported-by-me',
+    page,
+    pageSize: reportedPagination.pageSize,
+    setTasks: setReportedTasks,
+    setPagination: setReportedPagination
+  });
+
+  const fetchToCheckTasksPaginated = async (page = 0) => fetchPaginatedTaskList({
+    endpoint: '/api/tasks/to-check',
+    page,
+    pageSize: toCheckPagination.pageSize,
+    setTasks: setTasksToCheck,
+    setPagination: setToCheckPagination
+  });
+
+  const fetchAllTasksPaginated = async (page = 0) => fetchPaginatedTaskList({
+    endpoint: '/api/tasks/paginated',
+    page,
+    pageSize: allTasksPagination.pageSize,
+    setTasks: setAllTasks,
+    setPagination: setAllTasksPagination
+  });
+
+  const fetchMyTasks = async () => {
+    let loadingTimeout;
+    try {
+      loadingTimeout = setTimeout(() => {
+        setLoading(true);
+      }, 100);
+
+      setError('');
+
+      const results = await Promise.all([
+        fetchAssignedTasksPaginated(0),
+        fetchReportedTasksPaginated(0),
+        fetchToCheckTasksPaginated(0),
+        fetchAllTasksPaginated(0)
+      ]);
+
+      if (!results.every(Boolean)) {
+        setError('Failed to load tasks');
+      }
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      setError('Failed to load tasks');
+    } finally {
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+      }
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -27,87 +124,99 @@ const MyTasks = ({ user }) => {
     }
   }, [user]);
 
-  const fetchMyTasks = async () => {
-    try {
-      // Set loading to true after a short delay to prevent flicker for fast responses
-      const loadingTimeout = setTimeout(() => {
-        setLoading(true);
-      }, 100);
-      
-      // Fetch assigned tasks
-      const assignedResponse = await fetch('/api/tasks/assigned-to-me', {
-        credentials: 'include'
-      });
-      
-      // Fetch reported tasks
-      const reportedResponse = await fetch('/api/tasks/reported-by-me', {
-        credentials: 'include'
-      });
-      
-      // Fetch tasks to check
-      const toCheckResponse = await fetch('/api/tasks/to-check', {
-        credentials: 'include'
-      });
-      
-      if (assignedResponse.ok) {
-        const assignedData = await assignedResponse.json();
-        setAssignedTasks(assignedData);
-      }
-      
-      if (reportedResponse.ok) {
-        const reportedData = await reportedResponse.json();
-        setReportedTasks(reportedData);
-      }
-      
-      if (toCheckResponse.ok) {
-        const toCheckData = await toCheckResponse.json();
-        setTasksToCheck(toCheckData);
-      }
-      
-      // Fetch first page of all tasks
-      await fetchAllTasksPaginated(0);
-      
-      if (!assignedResponse.ok && !reportedResponse.ok && !toCheckResponse.ok) {
-        setError('Failed to load tasks');
-      }
-      
-      // Clear the loading timeout since we're done
-      clearTimeout(loadingTimeout);
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
-      setError('Failed to load tasks');
-    } finally {
-      setLoading(false);
+  const handlePageChange = (tabKey, newPage) => {
+    const paginationMap = {
+      assigned: assignedPagination,
+      reported: reportedPagination,
+      toCheck: toCheckPagination,
+      allTasks: allTasksPagination
+    };
+
+    const fetchMap = {
+      assigned: fetchAssignedTasksPaginated,
+      reported: fetchReportedTasksPaginated,
+      toCheck: fetchToCheckTasksPaginated,
+      allTasks: fetchAllTasksPaginated
+    };
+
+    const pagination = paginationMap[tabKey];
+    const fetchFn = fetchMap[tabKey];
+
+    if (!pagination || !fetchFn) {
+      return;
+    }
+
+    if (newPage >= 0 && newPage < pagination.totalPages) {
+      fetchFn(newPage);
     }
   };
 
-  const fetchAllTasksPaginated = async (page) => {
-    try {
-      const response = await fetch(`/api/tasks/paginated?page=${page}&size=${allTasksPagination.pageSize}`, {
-        credentials: 'include'
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setAllTasks(data.tasks);
-        setAllTasksPagination({
-          currentPage: data.currentPage,
-          totalPages: data.totalPages,
-          totalItems: data.totalItems,
-          hasNext: data.hasNext,
-          hasPrevious: data.hasPrevious,
-          pageSize: allTasksPagination.pageSize
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching paginated tasks:', error);
+  const renderPaginationControls = (pagination, tabKey) => {
+    if (!pagination || pagination.totalPages <= 1) {
+      return null;
     }
-  };
 
-  const handlePageChange = (newPage) => {
-    if (newPage >= 0 && newPage < allTasksPagination.totalPages) {
-      fetchAllTasksPaginated(newPage);
+    const { currentPage, pageSize, totalItems, totalPages, hasPrevious, hasNext } = pagination;
+    const hasItems = totalItems > 0;
+    const startItem = hasItems ? currentPage * pageSize + 1 : 0;
+    const endItem = hasItems ? Math.min((currentPage + 1) * pageSize, totalItems) : 0;
+
+    const maxButtons = Math.min(5, totalPages);
+    const pageButtons = [];
+
+    for (let i = 0; i < maxButtons; i += 1) {
+      let pageNumber;
+      if (totalPages <= 5) {
+        pageNumber = i;
+      } else if (currentPage <= 2) {
+        pageNumber = i;
+      } else if (currentPage >= totalPages - 3) {
+        pageNumber = totalPages - 5 + i;
+      } else {
+        pageNumber = currentPage - 2 + i;
+      }
+
+      if (pageNumber < 0 || pageNumber >= totalPages) {
+        continue;
+      }
+
+      pageButtons.push(
+        <button
+          key={pageNumber}
+          className={`btn-small ${pageNumber === currentPage ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => handlePageChange(tabKey, pageNumber)}
+        >
+          {pageNumber + 1}
+        </button>
+      );
     }
+
+    return (
+      <div className="pagination-controls">
+        <div className="pagination-info">
+          {hasItems ? `Showing ${startItem} to ${endItem} of ${totalItems} tasks` : 'No tasks to display'}
+        </div>
+        <div className="pagination-buttons">
+          <button
+            className="btn-small btn-outline"
+            onClick={() => handlePageChange(tabKey, currentPage - 1)}
+            disabled={!hasPrevious}
+          >
+            ← Previous
+          </button>
+          <div className="page-numbers">
+            {pageButtons}
+          </div>
+          <button
+            className="btn-small btn-outline"
+            onClick={() => handlePageChange(tabKey, currentPage + 1)}
+            disabled={!hasNext}
+          >
+            Next →
+          </button>
+        </div>
+      </div>
+    );
   };
 
   const canEditTask = (task) => {
@@ -139,9 +248,6 @@ const MyTasks = ({ user }) => {
         setShowStandaloneForm(false);
         // Refresh the tasks
         fetchMyTasks();
-        if (activeTab === 'all') {
-          fetchAllTasksPaginated(0);
-        }
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to create standalone task');
@@ -353,19 +459,19 @@ const MyTasks = ({ user }) => {
               className={`compact-tab ${activeTab === 'assigned' ? 'active' : ''}`}
               onClick={() => setActiveTab('assigned')}
             >
-              Assigned to Me ({assignedTasks.length})
+              Assigned to Me ({assignedPagination.totalItems})
             </button>
             <button 
               className={`compact-tab ${activeTab === 'reported' ? 'active' : ''}`}
               onClick={() => setActiveTab('reported')}
             >
-              Created by Me ({reportedTasks.length})
+              Created by Me ({reportedPagination.totalItems})
             </button>
             <button 
               className={`compact-tab ${activeTab === 'toCheck' ? 'active' : ''}`}
               onClick={() => setActiveTab('toCheck')}
             >
-              To Check ({tasksToCheck.length})
+              To Check ({toCheckPagination.totalItems})
             </button>
             <button 
               className={`compact-tab ${activeTab === 'allTasks' ? 'active' : ''}`}
@@ -399,55 +505,64 @@ const MyTasks = ({ user }) => {
       <div className="tasks-content">
         {activeTab === 'assigned' && (
           <div className="tasks-section">
-            {assignedTasks.length === 0 ? (
+            {assignedTasks.length === 0 && assignedPagination.totalItems === 0 ? (
               <div className="empty-state">
                 <span className="empty-icon">✅</span>
                 <h3>No tasks assigned to you</h3>
                 <p>You don't have any tasks assigned at the moment.</p>
               </div>
             ) : (
-              <div className="tasks-grid">
-                {assignedTasks.map(renderTaskCard)}
-              </div>
+              <>
+                <div className="tasks-grid">
+                  {assignedTasks.map(renderTaskCard)}
+                </div>
+                {renderPaginationControls(assignedPagination, 'assigned')}
+              </>
             )}
           </div>
         )}
 
         {activeTab === 'reported' && (
           <div className="tasks-section">
-            {reportedTasks.length === 0 ? (
+            {reportedTasks.length === 0 && reportedPagination.totalItems === 0 ? (
               <div className="empty-state">
                 <span className="empty-icon">📝</span>
                 <h3>No tasks created by you</h3>
                 <p>You haven't created any tasks yet.</p>
               </div>
             ) : (
-              <div className="tasks-grid">
-                {reportedTasks.map(renderTaskCard)}
-              </div>
+              <>
+                <div className="tasks-grid">
+                  {reportedTasks.map(renderTaskCard)}
+                </div>
+                {renderPaginationControls(reportedPagination, 'reported')}
+              </>
             )}
           </div>
         )}
 
         {activeTab === 'toCheck' && (
           <div className="tasks-section">
-            {tasksToCheck.length === 0 ? (
+            {tasksToCheck.length === 0 && toCheckPagination.totalItems === 0 ? (
               <div className="empty-state">
                 <span className="empty-icon">✅</span>
                 <h3>No tasks assigned for checking</h3>
                 <p>You don't have any tasks assigned to you for verification and approval.</p>
               </div>
             ) : (
-              <div className="tasks-grid">
-                {tasksToCheck.map(renderTaskCard)}
-              </div>
+              <>
+                <div className="tasks-grid">
+                  {tasksToCheck.map(renderTaskCard)}
+                </div>
+                {renderPaginationControls(toCheckPagination, 'toCheck')}
+              </>
             )}
           </div>
         )}
 
         {activeTab === 'allTasks' && (
           <div className="tasks-section">
-            {allTasks.length === 0 ? (
+            {allTasks.length === 0 && allTasksPagination.totalItems === 0 ? (
               <div className="empty-state">
                 <span className="empty-icon">📋</span>
                 <h3>No tasks found</h3>
@@ -458,58 +573,7 @@ const MyTasks = ({ user }) => {
                 <div className="tasks-grid">
                   {allTasks.map(renderTaskCard)}
                 </div>
-                
-                {/* Pagination Controls */}
-                {allTasksPagination.totalPages > 1 && (
-                  <div className="pagination-controls">
-                    <div className="pagination-info">
-                      Showing {allTasksPagination.currentPage * allTasksPagination.pageSize + 1} to {Math.min((allTasksPagination.currentPage + 1) * allTasksPagination.pageSize, allTasksPagination.totalItems)} of {allTasksPagination.totalItems} tasks
-                    </div>
-                    
-                    <div className="pagination-buttons">
-                      <button 
-                        className="btn-small btn-outline"
-                        onClick={() => handlePageChange(allTasksPagination.currentPage - 1)}
-                        disabled={!allTasksPagination.hasPrevious}
-                      >
-                        ← Previous
-                      </button>
-                      
-                      <div className="page-numbers">
-                        {Array.from({ length: Math.min(5, allTasksPagination.totalPages) }, (_, i) => {
-                          let pageNum;
-                          if (allTasksPagination.totalPages <= 5) {
-                            pageNum = i;
-                          } else if (allTasksPagination.currentPage <= 2) {
-                            pageNum = i;
-                          } else if (allTasksPagination.currentPage >= allTasksPagination.totalPages - 3) {
-                            pageNum = allTasksPagination.totalPages - 5 + i;
-                          } else {
-                            pageNum = allTasksPagination.currentPage - 2 + i;
-                          }
-                          
-                          return (
-                            <button
-                              key={pageNum}
-                              className={`btn-small ${pageNum === allTasksPagination.currentPage ? 'btn-primary' : 'btn-outline'}`}
-                              onClick={() => handlePageChange(pageNum)}
-                            >
-                              {pageNum + 1}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      
-                      <button 
-                        className="btn-small btn-outline"
-                        onClick={() => handlePageChange(allTasksPagination.currentPage + 1)}
-                        disabled={!allTasksPagination.hasNext}
-                      >
-                        Next →
-                      </button>
-                    </div>
-                  </div>
-                )}
+                {renderPaginationControls(allTasksPagination, 'allTasks')}
               </>
             )}
           </div>
