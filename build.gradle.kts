@@ -41,6 +41,10 @@ dependencies {
 
     // Or for MySQL:
     runtimeOnly("com.mysql:mysql-connector-j")
+    
+    // Apache POI for Excel export
+    implementation("org.apache.poi:poi:5.2.4")
+    implementation("org.apache.poi:poi-ooxml:5.2.4")
 }
 
 tasks.test {
