@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.example.models.User;
+import org.example.service.LoginAttemptService;
 import org.example.service.UserService;
 
 @RestController
@@ -36,53 +37,69 @@ public class ApiAuthController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private LoginAttemptService loginAttemptService;
+
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> loginRequest, HttpServletRequest request) {
         Map<String, Object> response = new HashMap<>();
-        
+
+        String clientIp = getClientIp(request);
+
+        if (loginAttemptService.isBlocked(clientIp)) {
+            logger.warn("Login blocked for IP {} due to too many failed attempts", clientIp);
+            response.put("success", false);
+            response.put("message", "Too many failed login attempts. Please try again in " + LoginAttemptService.LOCK_DURATION_MINUTES + " minutes.");
+            return ResponseEntity.status(429).body(response);
+        }
+
         try {
             String username = loginRequest.get("username");
             String password = loginRequest.get("password");
-            
+
             if (username == null || password == null) {
                 response.put("success", false);
                 response.put("message", "Username and password are required");
                 return ResponseEntity.badRequest().body(response);
             }
-            
+
             // Authenticate the user
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(username, password)
             );
-            
+
             if (authentication.isAuthenticated()) {
+                loginAttemptService.loginSucceeded(clientIp);
+
                 // Create or get the session
                 HttpSession session = request.getSession(true);
                 System.out.println("Session created: " + session.getId());
-                
+
                 // Set the authentication in the SecurityContext
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                
+
                 // Save the SecurityContext to the session
                 securityContextRepository.saveContext(SecurityContextHolder.getContext(), request, null);
-                
+
                 System.out.println("Authentication saved to session: " + authentication.getName());
                 System.out.println("Session ID after save: " + session.getId());
-                
+
                 response.put("success", true);
                 response.put("message", "Login successful");
                 response.put("username", username);
                 response.put("sessionId", session.getId());
                 return ResponseEntity.ok(response);
             } else {
+                loginAttemptService.loginFailed(clientIp);
                 response.put("success", false);
                 response.put("message", "Authentication failed");
                 return ResponseEntity.status(401).body(response);
             }
-            
+
         } catch (AuthenticationException e) {
+            loginAttemptService.loginFailed(clientIp);
             response.put("success", false);
             response.put("message", "Invalid username or password");
             return ResponseEntity.status(401).body(response);
@@ -91,6 +108,14 @@ public class ApiAuthController {
             response.put("message", "Login failed: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 
     @GetMapping("/status")
